@@ -1,0 +1,24 @@
+import React from 'react';
+import { AdminSidebar } from '@/components/admin/AdminSidebar';
+
+export const metadata = {
+  title: {
+    template: '%s | Admin | CASA CENTRAL',
+    default: 'Admin Dashboard | CASA CENTRAL',
+  },
+};
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-screen">
+      <AdminSidebar />
+      <main className="flex-1 p-8 bg-background overflow-y-auto">
+        {children}
+      </main>
+    </div>
+  );
+}

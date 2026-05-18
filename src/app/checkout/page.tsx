@@ -190,7 +190,7 @@ function CheckoutContent() {
               </div>
               <div className="flex gap-4">
                 <Button type="button" variant="outline" className="rounded-full" onClick={() => setStep('payment')}>Back</Button>
-                <Button className="flex-1 rounded-full py-6 text-lg" onClick={handlePlaceOrder}>Place Order — ₱{grandTotal.toLocaleString()}</Button>
+                <Button className="flex-1 rounded-full py-6 text-lg" onClick={handlePlaceOrder}>Place Order — {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(grandTotal))}</Button>
               </div>
             </div>
           )}
@@ -215,7 +215,7 @@ function CheckoutContent() {
                     <p className="text-sm font-medium text-primary truncate">{item.name}</p>
                     <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                   </div>
-                  <p className="text-sm font-bold text-accent-foreground">₱{(item.price * item.quantity).toLocaleString()}</p>
+                  <p className="text-sm font-bold text-accent-foreground">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(item.price * item.quantity))}</p>
                 </div>
               ))}
             </div>
@@ -223,21 +223,21 @@ function CheckoutContent() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">₱{subtotal.toLocaleString()}</span>
+                <span className="font-medium">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(subtotal))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Shipping</span>
-                <span className="font-medium">{shippingTotal === 0 ? 'Free' : `₱${shippingTotal.toLocaleString()}`}</span>
+                <span className="font-medium">{shippingTotal === 0 ? 'Free' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(shippingTotal))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Tax (12%)</span>
-                <span className="font-medium">₱{taxTotal.toLocaleString()}</span>
+                <span className="font-medium">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(taxTotal))}</span>
               </div>
             </div>
             <Separator />
             <div className="flex justify-between text-lg font-bold">
               <span className="text-primary">Total</span>
-              <span className="text-primary">₱{grandTotal.toLocaleString()}</span>
+              <span className="text-primary">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(grandTotal))}</span>
             </div>
           </div>
         </div>

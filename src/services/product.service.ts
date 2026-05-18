@@ -1,30 +1,22 @@
 import { ProductRepository } from '@/repositories/product.repository'
-import { Product, ProductVariant, Prisma } from '@prisma/client'
 import { CreateProductDto, UpdateProductDto, CreateProductVariantDto } from '@/types/product'
+import { Database } from '@/types/database.types'
 
-const productWithRelations = Prisma.validator<Prisma.ProductDefaultArgs>()({
-  include: { variants: true, category: true, brand: true },
-})
-
-const productWithCategoryAndBrand = Prisma.validator<Prisma.ProductDefaultArgs>()({
-  include: { category: true, brand: true },
-})
-
-export type ProductWithRelations = Prisma.ProductGetPayload<typeof productWithRelations>
-export type ProductWithCategoryAndBrand = Prisma.ProductGetPayload<typeof productWithCategoryAndBrand>
+type ProductRow = Database['public']['Tables']['products']['Row']
+type ProductVariantRow = Database['public']['Tables']['product_variants']['Row']
 
 const productRepository = new ProductRepository()
 
 export class ProductService {
-  async createProduct(data: CreateProductDto): Promise<Product> {
+  async createProduct(data: CreateProductDto): Promise<ProductRow> {
     return productRepository.create(data)
   }
 
-  async getProductById(id: string): Promise<ProductWithRelations | null> {
+  async getProductById(id: string): Promise<any | null> {
     return productRepository.findById(id)
   }
 
-  async getProductBySlug(slug: string): Promise<ProductWithRelations | null> {
+  async getProductBySlug(slug: string): Promise<any | null> {
     return productRepository.findBySlug(slug)
   }
 
@@ -33,19 +25,19 @@ export class ProductService {
     brandId?: string
     limit?: number
     offset?: number
-  }): Promise<{ items: ProductWithCategoryAndBrand[]; total: number }> {
+  }): Promise<{ items: any[]; total: number }> {
     return productRepository.findAll(params)
   }
 
-  async updateProduct(id: string, data: UpdateProductDto): Promise<Product> {
+  async updateProduct(id: string, data: UpdateProductDto): Promise<ProductRow> {
     return productRepository.update(id, data)
   }
 
-  async addVariant(data: CreateProductVariantDto): Promise<ProductVariant> {
+  async addVariant(data: CreateProductVariantDto): Promise<ProductVariantRow> {
     return productRepository.createVariant(data)
   }
 
-  async getProductVariants(productId: string): Promise<ProductVariant[]> {
+  async getProductVariants(productId: string): Promise<ProductVariantRow[]> {
     return productRepository.findVariantsByProductId(productId)
   }
 }

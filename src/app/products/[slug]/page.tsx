@@ -159,7 +159,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               {product.name}
             </h1>
             <p className="text-2xl font-semibold text-accent-foreground">
-              ₱{Number(product.basePrice).toLocaleString()}
+              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(product.basePrice || 0))}
             </p>
             <p className="text-lg text-muted-foreground leading-relaxed">
               {product.description}

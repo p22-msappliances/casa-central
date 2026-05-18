@@ -4,15 +4,15 @@ import { Button } from '@/components/ui/button';
 import { MoveRight, ArrowRight, Star, ShieldCheck, Truck, HeadphonesIcon } from 'lucide-react';
 
 const IMG = {
-  hero: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=90',
-  hero2: 'https://images.unsplash.com/photo-1556909114-44ba578bc49b?w=1200&q=90',
-  fridge: 'https://images.unsplash.com/photo-1600566753376-12c8ab7c3a0c?w=800&q=80',
-  washing: 'https://images.unsplash.com/photo-1610557899350-1715f3b01970?w=800&q=80',
-  ac: 'https://images.unsplash.com/photo-1585775775657-06c2e6b49c70?w=800&q=80',
-  tv: 'https://images.unsplash.com/photo-1593359674799-6c9c90d5be6b?w=800&q=80',
-  audio: 'https://images.unsplash.com/photo-1540526377264-7049969a65e6?w=800&q=80',
-  kitchen: 'https://images.unsplash.com/photo-1556909172-5457199677c?w=800&q=80',
-  story1: 'https://images.unsplash.com/photo-1586023492125-27d2c045efd7?w=1200&q=80',
+  hero: 'https://images.pexels.com/photos/36777543/pexels-photo-36777543.jpeg',
+  hero2: 'https://images.pexels.com/photos/5741975/pexels-photo-5741975.jpeg',
+  fridge: 'https://images.squarespace-cdn.com/content/v1/5c1ae925d274cba0ba0ccbab/8418be97-4a73-48b9-a796-c8481ca619c2/zline--french--door--black--stainless--steel--standard--depth--refrigerator--RSMZ-W-36-BS-CB--lifestyle--front.jpg',
+  washing: 'https://www.lg.com/content/dam/channel/wcms/za/images/washing-machines/f10c3ndp5_alsqesa_efsa_za_c/gallery/Zoom-WM_v2.jpg?w=800',
+  ac: 'https://www.brittany.com.ph/wp-content/uploads/2022/10/Which-High-Tech-Air-Conditioners-Should-I-Get-For-My-Luxury-Home.png',
+  tv: 'https://cdn.mos.cms.futurecdn.net/26dTTmnfYaVWedxfxn8pUb.jpg',
+  audio: 'https://upscaleaudio.com/cdn/shop/files/DSC05180-2_edit.jpg?v=1707847191&width=3840',
+  kitchen: 'https://www.pico-sa.com/wp-content/uploads/2018/06/pico-muebles-projects-luxury-kitchens-georgia-1.jpg',
+  story1: 'https://www.mechcool.co.uk/wp-content/uploads/2024/09/wall-mounted-air-con-unit.jpg',
   story2: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200&q=80',
   story3: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1200&q=80',
 };

@@ -1,6 +1,8 @@
-import { User, RoleName } from '@prisma/client'
+import { Database } from '@/types/database.types'
 
-export type UserWithProfile = User
+type ProfileRow = Database['public']['Tables']['profiles']['Row']
+
+export type UserWithProfile = ProfileRow
 
 export type CreateUserDto = {
   email: string
@@ -9,7 +11,7 @@ export type CreateUserDto = {
   lastName?: string
   phoneNumber?: string
   address?: string
-  role?: RoleName
+  role?: Database['public']['Enums']['role_name']
 }
 
 export type UpdateUserDto = Partial<CreateUserDto>

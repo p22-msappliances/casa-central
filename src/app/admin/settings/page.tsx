@@ -37,11 +37,11 @@ export default function AdminSettingsPage() {
           <h3 className="text-lg font-bold text-primary font-heading mb-4">Shipping Settings</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label>Free Shipping Threshold (₱)</Label>
+              <Label>Free Shipping Threshold ($)</Label>
               <Input defaultValue="5000" type="number" />
             </div>
             <div>
-              <Label>Standard Shipping Fee (₱)</Label>
+              <Label>Standard Shipping Fee ($)</Label>
               <Input defaultValue="150" type="number" />
             </div>
           </div>

@@ -1,20 +1,12 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, AreaChart, Area,
 } from 'recharts';
-import { TrendingUp, Package, ShoppingCart, Users, DollarSign, AlertTriangle } from 'lucide-react';
-
-const stats = [
-  { label: 'Total Revenue', value: '₱1,245,000', change: '+12.5%', icon: DollarSign, color: 'text-green-500' },
-  { label: 'Orders', value: '342', change: '+8.2%', icon: ShoppingCart, color: 'text-blue-500' },
-  { label: 'Products', value: '1,247', change: '+3.1%', icon: Package, color: 'text-purple-500' },
-  { label: 'Customers', value: '892', change: '+15.3%', icon: Users, color: 'text-orange-500' },
-];
+import { TrendingUp, Package, ShoppingCart, Users, DollarSign, AlertTriangle, Loader2 } from 'lucide-react';
+import { getAdminStats } from '@/app/actions/admin';
 
 const salesData = [
   { month: 'Jan', sales: 120000, orders: 45 },
@@ -41,6 +33,64 @@ const recentOrders = [
 ];
 
 export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const result = await getAdminStats();
+        if (result.success) {
+          setStats(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-full py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const statsConfig = [
+    { 
+      label: 'Total Revenue', 
+      value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats?.totalRevenue || 0), 
+      change: '+12.5%', 
+      icon: DollarSign, 
+      color: 'text-green-500' 
+    },
+    { 
+      label: 'Orders', 
+      value: stats?.orderCount || 0, 
+      change: '+8.2%', 
+      icon: ShoppingCart, 
+      color: 'text-blue-500' 
+    },
+    { 
+      label: 'Products', 
+      value: stats?.productCount || 0, 
+      change: '+3.1%', 
+      icon: Package, 
+      color: 'text-purple-500' 
+    },
+    { 
+      label: 'Customers', 
+      value: stats?.customerCount || 0, 
+      change: '+15.3%', 
+      icon: Users, 
+      color: 'text-orange-500' 
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -48,9 +98,8 @@ export default function AdminDashboardPage() {
         <p className="text-muted-foreground mt-1">Welcome back. Here is your store overview.</p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => {
+        {statsConfig.map((stat) => {
           const Icon = stat.icon;
           return (
             <div key={stat.label} className="p-4 rounded-xl bg-card border border-secondary/30 space-y-2">
@@ -67,9 +116,7 @@ export default function AdminDashboardPage() {
         })}
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Sales Chart */}
         <div className="p-6 rounded-xl bg-card border border-secondary/30">
           <h3 className="text-lg font-bold text-primary font-heading mb-4">Sales Overview</h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -89,7 +136,6 @@ export default function AdminDashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Product Performance */}
         <div className="p-6 rounded-xl bg-card border border-secondary/30">
           <h3 className="text-lg font-bold text-primary font-heading mb-4">Revenue by Category</h3>
           <ResponsiveContainer width="100%" height={250}>
@@ -104,26 +150,25 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Recent Orders */}
       <div className="p-6 rounded-xl bg-card border border-secondary/30">
         <h3 className="text-lg font-bold text-primary font-heading mb-4">Recent Orders</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-muted-foreground border-b border-secondary/30">
-                <th className="pb-3 font-medium">Order ID</th>
-                <th className="pb-3 font-medium">Customer</th>
-                <th className="pb-3 font-medium">Total</th>
-                <th className="pb-3 font-medium">Status</th>
+              <tr className="text-left text-muted-foreground border-b border-secondary/30 bg-secondary/20">
+                <th className="p-4 font-medium">Order ID</th>
+                <th className="p-4 font-medium">Customer</th>
+                <th className="p-4 font-medium">Total</th>
+                <th className="p-4 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {recentOrders.map((order) => (
-                <tr key={order.id} className="border-b border-secondary/10">
-                  <td className="py-3 font-mono font-medium text-primary">{order.id}</td>
-                  <td className="py-3 text-muted-foreground">{order.customer}</td>
-                  <td className="py-3 font-semibold">₱{order.total.toLocaleString()}</td>
-                  <td className="py-3">
+                <tr key={order.id} className="border-b border-secondary/10 hover:bg-secondary/10 transition-colors">
+                  <td className="p-4 font-mono font-medium text-primary">{order.id}</td>
+                  <td className="p-4 text-muted-foreground">{order.customer}</td>
+                  <td className="p-4 font-semibold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(order.total))}</td>
+                  <td className="p-4">
                     <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
                       order.status === 'Delivered' ? 'bg-green-500/10 text-green-500' :
                       order.status === 'Shipped' ? 'bg-primary/10 text-primary' :
@@ -140,3 +185,4 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+

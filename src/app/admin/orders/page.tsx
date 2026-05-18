@@ -1,18 +1,42 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
-
-const mockOrders = [
-  { id: 'CC-ABC123', customer: 'Maria Santos', date: '2026-05-10', total: 65000, status: 'Shipped', items: 3 },
-  { id: 'CC-DEF456', customer: 'Jose Reyes', date: '2026-05-09', total: 25000, status: 'Pending', items: 1 },
-  { id: 'CC-GHI789', customer: 'Anna Cruz', date: '2026-05-08', total: 95000, status: 'Delivered', items: 2 },
-  { id: 'CC-JKL012', customer: 'Pedro Tan', date: '2026-05-07', total: 42000, status: 'Processing', items: 1 },
-  { id: 'CC-MNO345', customer: 'Sofia Garcia', date: '2026-05-06', total: 78000, status: 'Cancelled', items: 2 },
-];
+import { Eye, Loader2 } from 'lucide-react';
+import { getAdminOrders } from '@/app/actions/admin';
+import { toast } from 'sonner';
 
 export default function AdminOrdersPage() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchOrders() {
+      try {
+        const result = await getAdminOrders();
+        if (result.success) {
+          setOrders(result.data || []);
+        } else {
+          toast.error('Failed to load orders');
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        toast.error('An unexpected error occurred');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchOrders();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-full py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -33,13 +57,13 @@ export default function AdminOrdersPage() {
             </tr>
           </thead>
           <tbody>
-            {mockOrders.map((order) => (
+            {orders.map((order) => (
               <tr key={order.id} className="border-b border-secondary/10 hover:bg-secondary/10 transition-colors">
                 <td className="p-4 font-mono font-medium text-primary">{order.id}</td>
                 <td className="p-4 text-muted-foreground">{order.customer}</td>
                 <td className="p-4 text-muted-foreground">{order.date}</td>
                 <td className="p-4 text-muted-foreground">{order.items}</td>
-                <td className="p-4 font-semibold">₱{order.total.toLocaleString()}</td>
+                <td className="p-4 font-semibold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(order.total))}</td>
                 <td className="p-4">
                   <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
                     order.status === 'Delivered' ? 'bg-green-500/10 text-green-500' :
@@ -56,6 +80,13 @@ export default function AdminOrdersPage() {
                 </td>
               </tr>
             ))}
+            {orders.length === 0 && (
+              <tr>
+                <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                  No orders found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

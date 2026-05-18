@@ -4,12 +4,14 @@ import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Star, ShoppingCart, Heart } from 'lucide-react';
-import { Product } from '@prisma/client';
+import { Database } from '@/types/database.types';
+
+type ProductRow = Database['public']['Tables']['products']['Row'];
 
 interface ProductCardProps {
-  product: Product & {
-    category: { name: string } | null;
-    brand: { name: string } | null;
+  product: ProductRow & {
+    category?: { name: string } | null;
+    brand?: { name: string } | null;
   };
 }
 
@@ -21,9 +23,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     <Link href={`/products/${productSlug}`} className="group block">
       <div className="relative overflow-hidden rounded-2xl bg-white border border-border/50 shadow-sm hover:shadow-xl transition-all duration-300">
         <div className="relative w-full aspect-square overflow-hidden bg-muted/20">
-          {product.imageUrl ? (
+          {product.image_url ? (
             <Image
-              src={product.imageUrl}
+              src={product.image_url}
               alt={product.name}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -51,7 +53,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             {product.description}
           </p>
           <div className="flex items-center justify-between pt-2">
-            <span className="text-xl font-bold text-brand-navy">₱{Number(product.basePrice).toLocaleString()}</span>
+            <span className="text-xl font-bold text-brand-navy">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(product.base_price) || 0)}</span>
             <button
               className="p-2.5 rounded-full bg-brand-navy text-white hover:bg-brand-navy/90 transition-colors shadow-sm"
               aria-label="Add to cart"

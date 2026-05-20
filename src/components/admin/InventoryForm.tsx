@@ -14,9 +14,9 @@ const inventorySchema = z.object({
   sku: z.string().min(1, "SKU is required"),
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  quantity: z.coerce.number().min(0, "Quantity must be positive"),
-  cost_price: z.coerce.number().min(0, "Cost price must be positive"),
-  retail_price: z.coerce.number().min(0, "Retail price must be positive"),
+  quantity: z.number().min(0, "Quantity must be positive"),
+  cost_price: z.number().min(0, "Cost price must be positive"),
+  retail_price: z.number().min(0, "Retail price must be positive"),
 });
 
 type InventoryFormValues = z.infer<typeof inventorySchema>;
@@ -39,7 +39,7 @@ export function InventoryForm({
     handleSubmit,
     formState: { errors },
   } = useForm<InventoryFormValues>({
-    resolver: zodResolver(inventorySchema),
+    resolver: zodResolver(inventorySchema) as any,
     defaultValues: initialData
       ? {
           sku: initialData.sku,

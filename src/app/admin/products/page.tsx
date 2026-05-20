@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Plus, Search, Edit, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   getProducts,
@@ -27,102 +28,106 @@ import { Database } from "@/types/database.types";
 type Product = Database["public"]["Tables"]["products"]["Row"];
 
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [brands, setBrands] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: products = [], isLoading: loadingProducts } = useQuery({
+    queryKey: ["admin-products"],
+    queryFn: async () => {
+      const result = await getProducts();
+      if (!result.success) throw new Error(result.error);
+      return result.data || [];
+    },
+    staleTime: 10 * 1000,
+  });
 
-  async function fetchData() {
-    setLoading(true);
-    try {
-      const [productsRes, brandsRes, categoriesRes] = await Promise.all([
-        getProducts(),
-        getBrands(),
-        getCategories(),
-      ]);
+  const { data: brands = [] } = useQuery({
+    queryKey: ["admin-brands"],
+    queryFn: async () => {
+      const result = await getBrands();
+      if (!result.success) throw new Error(result.error);
+      return result.data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-      if (productsRes.success) setProducts(productsRes.data || []);
-      else toast.error('Failed to load products: ' + productsRes.error);
+  const { data: categories = [] } = useQuery({
+    queryKey: ["admin-categories"],
+    queryFn: async () => {
+      const result = await getCategories();
+      if (!result.success) throw new Error(result.error);
+      return result.data || [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-      if (brandsRes.success) setBrands(brandsRes.data || []);
-      if (categoriesRes.success) setCategories(categoriesRes.data || []);
-    } catch (error: any) {
-      toast.error("Failed to load data: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const brandMap = useMemo(() => {
+    const map = new Map<string, string>();
+    brands.forEach((b: any) => map.set(b.id, b.name));
+    return map;
+  }, [brands]);
 
-  async function handleSearch() {
-    if (!searchTerm.trim()) {
-      fetchData();
-      return;
-    }
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    categories.forEach((c: any) => map.set(c.id, c.name));
+    return map;
+  }, [categories]);
 
-    const result = await searchProducts(searchTerm);
-    if (result.success) {
-      setProducts(result.data || []);
-    } else {
-      toast.error("Search failed");
-    }
-  }
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return products;
+    const lower = searchTerm.toLowerCase();
+    return products.filter(
+      (p: Product) =>
+        p.name.toLowerCase().includes(lower) ||
+        p.slug.toLowerCase().includes(lower)
+    );
+  }, [products, searchTerm]);
 
-  async function handleSaveProduct() {
-    if (!formData.name || !formData.description || !formData.base_price || !formData.slug) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    if (!formData.brand_id || !formData.category_id) {
-      toast.error("Please select both a brand and category");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const result = editingProduct
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!formData.name || !formData.description || !formData.base_price || !formData.slug) {
+        throw new Error("Please fill in all required fields");
+      }
+      if (!formData.brand_id || !formData.category_id) {
+        throw new Error("Please select both a brand and category");
+      }
+      return editingProduct
         ? await updateProduct(editingProduct.id, formData)
-        : await createProduct({
-            ...formData,
-            id: crypto.randomUUID(),
-          });
-
+        : await createProduct({ ...formData, id: crypto.randomUUID() });
+    },
+    onSuccess: (result) => {
       if (result.success) {
         toast.success(editingProduct ? "Product updated" : "Product created");
         setIsDialogOpen(false);
         setEditingProduct(null);
         setFormData({});
-        await fetchData();
+        queryClient.invalidateQueries({ queryKey: ["admin-products"] });
       } else {
         toast.error(result.error || "Operation failed");
       }
-    } catch (error) {
-      toast.error("Operation failed");
-    } finally {
-      setIsSaving(false);
-    }
-  }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Operation failed");
+    },
+  });
 
-  async function handleDeleteProduct(id: string) {
-    if (!confirm("Are you sure you want to delete this product?")) return;
-
-    const result = await deleteProduct(id);
-    if (result.success) {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const result = await deleteProduct(id);
+      if (!result.success) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: () => {
       toast.success("Product deleted");
-      await fetchData();
-    } else {
-      toast.error(result.error || "Failed to delete product");
-    }
-  }
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete product");
+    },
+  });
 
   function openAddDialog() {
     setEditingProduct(null);
@@ -136,12 +141,7 @@ export default function AdminProductsPage() {
     setIsDialogOpen(true);
   }
 
-  const filteredProducts = products.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.slug.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) {
+  if (loadingProducts) {
     return (
       <div className="flex justify-center items-center h-full py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -169,12 +169,8 @@ export default function AdminProductsPage() {
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           />
         </div>
-        <Button onClick={handleSearch} variant="outline">
-          Search
-        </Button>
       </div>
 
       <div className="rounded-xl bg-card border border-secondary/30 overflow-hidden">
@@ -197,20 +193,20 @@ export default function AdminProductsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((product) => (
+                filteredProducts.map((product: Product) => (
                   <tr
                     key={product.id}
                     className="border-b border-secondary/10 hover:bg-secondary/10 transition-colors"
                   >
                     <td className="p-4 font-medium text-primary">{product.name}</td>
                     <td className="p-4 text-muted-foreground">
-                      {brands.find((b) => b.id === product.brand_id)?.name || "-"}
+                      {brandMap.get(product.brand_id) || "-"}
                     </td>
                     <td className="p-4 text-muted-foreground">
-                      {categories.find((c) => c.id === product.category_id)?.name || "-"}
+                      {categoryMap.get(product.category_id) || "-"}
                     </td>
                     <td className="p-4 font-semibold">
-                      ${product.base_price.toLocaleString()}
+                      ${Number(product.base_price).toLocaleString()}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
@@ -226,7 +222,12 @@ export default function AdminProductsPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 rounded-full text-destructive"
-                          onClick={() => handleDeleteProduct(product.id)}
+                          onClick={() => {
+                            if (confirm("Delete this product?")) {
+                              deleteMutation.mutate(product.id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -269,9 +270,7 @@ export default function AdminProductsPage() {
                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 rows={3}
                 value={formData.description || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Product description"
               />
             </div>
@@ -283,12 +282,10 @@ export default function AdminProductsPage() {
                   id="brand"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
                   value={formData.brand_id || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, brand_id: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, brand_id: e.target.value })}
                 >
                   <option value="">Select brand</option>
-                  {brands.map((brand) => (
+                  {brands.map((brand: any) => (
                     <option key={brand.id} value={brand.id}>
                       {brand.name}
                     </option>
@@ -302,12 +299,10 @@ export default function AdminProductsPage() {
                   id="category"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
                   value={formData.category_id || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category_id: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
                 >
                   <option value="">Select category</option>
-                  {categories.map((category) => (
+                  {categories.map((category: any) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
@@ -323,9 +318,7 @@ export default function AdminProductsPage() {
                   id="price"
                   type="number"
                   value={formData.base_price || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, base_price: parseFloat(e.target.value) })
-                  }
+                  onChange={(e) => setFormData({ ...formData, base_price: parseFloat(e.target.value) })}
                   placeholder="0.00"
                 />
               </div>
@@ -346,9 +339,7 @@ export default function AdminProductsPage() {
               <Input
                 id="imageUrl"
                 value={formData.image_url || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, image_url: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                 placeholder="https://..."
               />
             </div>
@@ -358,12 +349,12 @@ export default function AdminProductsPage() {
             <Button
               variant="outline"
               onClick={() => setIsDialogOpen(false)}
-              disabled={isSaving}
+              disabled={saveMutation.isPending}
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveProduct} disabled={isSaving}>
-              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+              {saveMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {editingProduct ? "Update Product" : "Create Product"}
             </Button>
           </DialogFooter>

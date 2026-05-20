@@ -25,7 +25,7 @@ import { Database } from "@/types/database.types";
 type Brand = Database["public"]["Tables"]["brands"]["Row"];
 
 export default function AdminBrandsPage() {
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);

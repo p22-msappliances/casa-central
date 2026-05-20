@@ -54,7 +54,7 @@ export const Navbar = () => {
     getUserAndRole();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (_event: any, session: any) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         

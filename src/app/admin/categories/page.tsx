@@ -25,7 +25,7 @@ import { Database } from "@/types/database.types";
 type Category = Database["public"]["Tables"]["categories"]["Row"];
 
 export default function AdminCategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);

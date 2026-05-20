@@ -16,27 +16,35 @@ interface ProductDetailClientProps {
 export default function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
   const addItem = useCartStore(state => state.addItem);
+  const totalStock = product.total_stock || 0;
+  const isInStock = totalStock > 0;
 
   const handleAddToCart = () => {
     const variant = product.product_variants?.[0];
-    if (!variant && !product.image_url) {
-      toast.error('No variants available for this product');
+    if (!variant || !isInStock) {
+      toast.error('This product is currently out of stock');
+      return;
+    }
+
+    if (quantity > totalStock) {
+      toast.error(`Only ${totalStock} available`);
       return;
     }
 
     addItem({
-      variantId: variant?.id || product.id,
+      variantId: variant.id,
       productId: product.id,
       name: product.name,
-      price: variant?.price || Number(product.base_price),
+      price: variant.price,
       quantity,
-      imageUrl: variant?.image_url || product.image_url,
+      imageUrl: variant.image_url || product.image_url,
+      maxQuantity: totalStock,
     });
 
     toast.success(`${product.name} added to cart`);
   };
 
-  const handleIncrement = () => setQuantity(prev => prev + 1);
+  const handleIncrement = () => setQuantity(prev => Math.min(prev + 1, totalStock));
   const handleDecrement = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
 
   const galleryImages = product.image_url ? [product.image_url] : [];
@@ -85,14 +93,15 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                   <Minus className="h-4 w-4" />
                 </Button>
                 <span className="text-lg font-bold text-primary">{quantity}</span>
-                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border/60" onClick={handleIncrement}>
+                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border/60" onClick={handleIncrement} disabled={quantity >= totalStock}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground text-center">{totalStock} available in stock</p>
 
-            <Button size="lg" className="w-full py-6 text-xl rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300 flex items-center justify-center gap-2" onClick={handleAddToCart}>
-              <ShoppingCart className="h-6 w-6" /> Add to Cart
+            <Button size="lg" className="w-full py-6 text-xl rounded-full shadow-lg transition-all duration-300 flex items-center justify-center gap-2" onClick={handleAddToCart} disabled={!isInStock}>
+              <ShoppingCart className="h-6 w-6" /> {isInStock ? 'Add to Cart' : 'Out of Stock'}
             </Button>
           </div>
 

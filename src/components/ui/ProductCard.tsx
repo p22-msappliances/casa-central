@@ -15,6 +15,8 @@ interface ProductCardProps {
     category?: { name: string } | null;
     brand?: { name: string } | null;
     product_variants?: ProductVariantRow[];
+    total_stock?: number;
+    is_in_stock?: boolean;
   };
 }
 
@@ -42,16 +44,24 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       price: variant.price,
       quantity: 1,
       imageUrl: variant.image_url || product.image_url || undefined,
+      maxQuantity: product.total_stock || 0,
     });
 
     toast.success(`${product.name} added to cart`);
   };
+
+  const isInStock = (product.total_stock || 0) > 0;
 
   return (
     <div className="group relative block">
       <Link href={`/products/${productSlug}`}>
         <div className="relative overflow-hidden rounded-2xl bg-white border border-border/50 shadow-sm hover:shadow-xl transition-all duration-300">
           <div className="relative w-full aspect-square overflow-hidden bg-muted/20">
+            {!isInStock && (
+              <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center">
+                <span className="bg-white text-brand-navy font-bold text-sm px-4 py-2 rounded-full">Out of Stock</span>
+              </div>
+            )}
             {product.image_url ? (
               <Image
                 src={product.image_url}
@@ -85,7 +95,12 @@ export const ProductCard = ({ product }: ProductCardProps) => {
               <span className="text-xl font-bold text-brand-navy">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(product.base_price) || 0)}</span>
               <button
                 onClick={handleAddToCart}
-                className="p-2.5 rounded-full bg-brand-navy text-white hover:bg-brand-navy/90 transition-colors shadow-sm"
+                disabled={!isInStock}
+                className={`p-2.5 rounded-full transition-colors shadow-sm ${
+                  isInStock
+                    ? 'bg-brand-navy text-white hover:bg-brand-navy/90'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }`}
                 aria-label="Add to cart"
               >
                 <ShoppingCart className="h-4 w-4" />

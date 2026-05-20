@@ -83,10 +83,17 @@ export const CartDrawer = () => {
                         </button>
                         <span className="text-xs font-bold w-4 text-center text-foreground">{item.quantity}</span>
                         <button
-                          className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted transition-colors cursor-pointer"
-                          onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
+                          className={`h-6 w-6 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                            item.maxQuantity && item.quantity >= item.maxQuantity
+                              ? 'text-muted-foreground/30 cursor-not-allowed'
+                              : 'hover:bg-muted text-muted-foreground'
+                          }`}
+                          onClick={() => {
+                            if (item.maxQuantity && item.quantity >= item.maxQuantity) return;
+                            updateQuantity(item.variantId, item.quantity + 1);
+                          }}
                         >
-                          <Plus className="h-3 w-3 text-muted-foreground" />
+                          <Plus className="h-3 w-3" />
                         </button>
                       </div>
                       <button

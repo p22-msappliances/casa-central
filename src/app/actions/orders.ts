@@ -58,23 +58,33 @@ export async function createOrder(orderData: {
 
   // 1. Check and Decrement Inventory
   for (const item of orderData.items) {
-    const { data: inv } = await supabase
+    const { data: invRows } = await supabase
       .from('inventory')
-      .select('id, quantity, product_variants(name, products(name))')
-      .eq('variant_id', item.variant_id)
-      .single();
+      .select('id, quantity, product_variants(sku, price, products(id, name, slug))')
+      .eq('variant_id', item.variant_id);
 
-    if (!inv || (inv.quantity || 0) < item.quantity) {
-      const productName = (inv as any)?.product_variants?.products?.name || 'Unknown Product';
-      return { success: false, error: `Insufficient stock for "${productName}". Available: ${inv?.quantity || 0}, Requested: ${item.quantity}` };
+    const totalAvailable = invRows?.reduce((sum, row) => sum + (row.quantity || 0), 0) || 0;
+
+    if (totalAvailable < item.quantity) {
+      const productName = (invRows?.[0] as any)?.product_variants?.products?.name || `Variant ${item.variant_id.slice(0, 8)}`;
+      return { success: false, error: `Insufficient stock for "${productName}". Available: ${totalAvailable}, Requested: ${item.quantity}` };
     }
 
-    const { error: invError } = await supabase
-      .from('inventory')
-      .update({ quantity: (inv.quantity || 0) - item.quantity })
-      .eq('id', inv.id);
+    // Decrement from warehouses with stock (FIFO)
+    let remaining = item.quantity;
+    for (const inv of (invRows || []).sort((a, b) => (b.quantity || 0) - (a.quantity || 0))) {
+      if (remaining <= 0) break;
+      const take = Math.min(remaining, inv.quantity || 0);
+      if (take > 0) {
+        const { error: invError } = await supabase
+          .from('inventory')
+          .update({ quantity: (inv.quantity || 0) - take })
+          .eq('id', inv.id);
 
-    if (invError) return { success: false, error: `Failed to update inventory: ${invError.message}` };
+        if (invError) return { success: false, error: `Failed to update inventory: ${invError.message}` };
+        remaining -= take;
+      }
+    }
   }
 
   // 2. Create Order

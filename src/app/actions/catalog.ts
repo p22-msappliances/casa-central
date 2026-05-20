@@ -8,7 +8,7 @@ export async function getProducts({ categoryId, brandId, searchTerm, priceRange 
   
   let query = supabase
     .from('products')
-    .select('*, product_variants(*)', { count: 'exact' });
+    .select('*, product_variants(*, inventory(quantity))', { count: 'exact' });
 
   if (categoryId) {
     query = query.eq('category_id', categoryId);
@@ -29,11 +29,19 @@ export async function getProducts({ categoryId, brandId, searchTerm, priceRange 
     return { success: false, error: error.message };
   }
 
+  const items = (data || []).map((product: any) => {
+    const totalStock = product.product_variants?.reduce((sum: number, v: any) => {
+      const variantStock = v.inventory?.reduce((s: number, inv: any) => s + (inv.quantity || 0), 0) || 0;
+      return sum + variantStock;
+    }, 0) || 0;
+    return { ...product, total_stock: totalStock, is_in_stock: totalStock > 0 };
+  }).filter((p: any) => p.is_in_stock);
+
   return { 
     success: true, 
     data: {
-      items: data || [],
-      total: count || 0
+      items,
+      total: items.length
     } 
   };
 }
@@ -160,10 +168,17 @@ export async function getProductBySlug(slug: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('products')
-    .select('*, product_variants(*), categories(name), brands(name)')
+    .select('*, product_variants(*, inventory(quantity)), categories(name), brands(name)')
     .eq('slug', slug)
     .single();
 
   if (error) return { success: false, error: error.message };
-  return { success: true, data };
+
+  const product = data as any;
+  const totalStock = product.product_variants?.reduce((sum: number, v: any) => {
+    const variantStock = v.inventory?.reduce((s: number, inv: any) => s + (inv.quantity || 0), 0) || 0;
+    return sum + variantStock;
+  }, 0) || 0;
+
+  return { success: true, data: { ...product, total_stock: totalStock, is_in_stock: totalStock > 0 } };
 }

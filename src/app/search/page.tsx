@@ -70,7 +70,7 @@ export default function SearchPage() {
                       <p className="font-semibold text-primary truncate">{product.name}</p>
                       <p className="text-xs text-muted-foreground">{product.category}</p>
                     </div>
-                    <p className="font-bold text-accent-foreground text-sm">₱{product.price.toLocaleString()}</p>
+                    <p className="font-bold text-accent-foreground text-sm">${product.price.toLocaleString()}</p>
                   </div>
                 </Link>
               ))}

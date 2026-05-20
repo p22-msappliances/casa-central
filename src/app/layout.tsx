@@ -4,6 +4,7 @@ import "./globals.css";
 import { Layout } from "@/components/ui/Layout";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { JsonLd } from "@/components/ui/JsonLd";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -85,6 +86,7 @@ export default function RootLayout({
         <QueryProvider>
           <Layout>{children}</Layout>
         </QueryProvider>
+        <Toaster position="bottom-right" richColors closeButton />
       </body>
     </html>
   );

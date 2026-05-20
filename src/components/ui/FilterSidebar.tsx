@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
@@ -19,15 +18,17 @@ export const FilterSidebar = ({
   onFilterChange,
 }: FilterSidebarProps) => {
   const handlePriceChange = (value: number | readonly number[]) => {
-    if (Array.isArray(value)) onFilterChange({ price: value });
+    if (Array.isArray(value) && value.length === 2) {
+      onFilterChange({ price: [value[0], value[1]] });
+    }
   };
 
   const handleCategoryChange = (value: string | null) => {
-    if (value) onFilterChange({ category: value });
+    onFilterChange({ categoryId: value === 'all' ? '' : value || '' });
   };
 
   const handleBrandChange = (value: string | null) => {
-    if (value) onFilterChange({ brand: value });
+    onFilterChange({ brandId: value === 'all' ? '' : value || '' });
   };
 
   return (
@@ -37,11 +38,12 @@ export const FilterSidebar = ({
         <div className="space-y-6">
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Categories</h4>
-            <Select onValueChange={handleCategoryChange}>
+            <Select onValueChange={handleCategoryChange} defaultValue="all">
               <SelectTrigger className="w-full border-border/60 bg-white">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
@@ -53,11 +55,12 @@ export const FilterSidebar = ({
 
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Brands</h4>
-            <Select onValueChange={handleBrandChange}>
+            <Select onValueChange={handleBrandChange} defaultValue="all">
               <SelectTrigger className="w-full border-border/60 bg-white">
                 <SelectValue placeholder="Select a brand" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Brands</SelectItem>
                 {brands.map((brand) => (
                   <SelectItem key={brand.id} value={brand.id}>
                     {brand.name}
@@ -70,16 +73,16 @@ export const FilterSidebar = ({
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Price Range</h4>
             <Slider
-              defaultValue={[500, 100000]}
-              max={200000}
+              defaultValue={[0, 1000000]}
+              max={1000000}
               step={500}
               min={0}
               onValueChange={handlePriceChange}
               className="[&_span[role='slider']]:bg-accent [&_span[role='slider']]:h-3 [&_span[role='slider']]:w-3"
             />
             <div className="flex justify-between text-xs text-muted-foreground mt-2">
-              <span>₱500</span>
-              <span>₱100,000</span>
+              <span>$0</span>
+              <span>$1,000,000</span>
             </div>
           </div>
 

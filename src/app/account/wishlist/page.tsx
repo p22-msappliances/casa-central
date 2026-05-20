@@ -19,7 +19,9 @@ export default function WishlistPage() {
     async function fetchWishlist() {
       try {
         const result = await getUserWishlist();
-        if (result.success) setWishlist(result.data);
+        if (result.success && result.data) {
+          setWishlist(result.data || []);
+        }
       } catch (err) {
         console.error('Error fetching wishlist:', err);
       } finally {
@@ -36,7 +38,9 @@ export default function WishlistPage() {
       if (result.success) {
         // Refresh wishlist data
         const refreshResult = await getUserWishlist();
-        if (refreshResult.success) setWishlist(refreshResult.data);
+        if (refreshResult.success && refreshResult.data) {
+          setWishlist(refreshResult.data || []);
+        }
       }
     } catch (err) {
       console.error('Error toggling wishlist:', err);

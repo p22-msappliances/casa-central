@@ -27,10 +27,9 @@ import { Input } from "@/components/ui/input";
 import { MoreVertical, Plus, Search, Trash, Edit } from "lucide-react";
 import { InventoryItem } from "@/types/inventory";
 import { InventoryForm } from "./InventoryForm";
-import { 
-  createInventoryItem, 
-  updateInventoryItem, 
-  deleteInventoryItem 
+import {
+  getInventory,
+  updateInventoryQuantity
 } from "@/app/actions/inventory";
 
 interface InventoryDashboardProps {
@@ -68,21 +67,12 @@ export function InventoryDashboard({ initialItems }: InventoryDashboardProps) {
   const handleCreate = async (data: any) => {
     setIsCreateOpen(false);
     const tempId = Math.random().toString();
-    const tempItem: InventoryItem = {
-      ...data,
-      id: tempId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      updated_by: null,
-    };
 
     startTransition(async () => {
-      addOptimisticItem({ type: 'create', item: tempItem });
-      const result = await createInventoryItem(data);
+      const result = await updateInventoryQuantity(data.variant_id, data.warehouse_id, data.quantity);
       if (result.success && result.data) {
         setItems(prev => [result.data!, ...prev]);
       } else {
-        // Handle error (e.g. show toast)
         alert("Failed to create item: " + result.error);
       }
     });

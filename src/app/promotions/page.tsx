@@ -9,7 +9,7 @@ const promotions = [
   { name: 'Summer Sale', code: 'SUMMER20', discount: '20% OFF', desc: 'On all refrigerators and air conditioners.', valid: 'June 1–30, 2026', active: true },
   { name: 'New Customer', code: 'WELCOME10', discount: '10% OFF', desc: 'Your first purchase at CASA CENTRAL.', valid: 'Ongoing', active: true },
   { name: 'Audio Fest', code: 'AUDIO15', discount: '15% OFF', desc: 'On all audio systems and soundbars.', valid: 'July 1–15, 2026', active: true },
-  { name: 'Free Shipping', code: 'FREESHIP', discount: 'Free Shipping', desc: 'On orders over ₱5,000.', valid: 'Limited time', active: false },
+  { name: 'Free Shipping', code: 'FREESHIP', discount: 'Free Shipping', desc: 'On orders over $5,000.', valid: 'Limited time', active: false },
 ];
 
 export default function PromotionsPage() {

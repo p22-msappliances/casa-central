@@ -6,16 +6,17 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetClose,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Trash2, Plus, Minus, X } from 'lucide-react';
 import { useCartStore, getTotalPrice, getTotalItems } from '@/store/useCartStore';
 import Image from 'next/image';
 import Link from 'next/link';
 
 export const CartDrawer = () => {
   const [open, setOpen] = useState(false);
-  const { items, removeItem, updateQuantity, hydrated } = useCartStore();
+  const { items, removeItem, updateQuantity } = useCartStore();
   const totalPrice = getTotalPrice(items);
   const totalCount = getTotalItems(items);
 
@@ -33,16 +34,21 @@ export const CartDrawer = () => {
           </span>
         )}
       </button>
-      <SheetContent className="w-full sm:max-w-md bg-white text-foreground flex flex-col">
-        <SheetHeader className="mb-8">
-          <SheetTitle className="text-2xl font-bold text-primary font-heading">
-            Shopping Cart
-          </SheetTitle>
+      <SheetContent className="w-full sm:max-w-md bg-white text-foreground flex flex-col p-0">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/50">
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-xl font-bold text-primary font-heading">
+              Shopping Cart ({totalCount})
+            </SheetTitle>
+            <SheetClose className="rounded-full p-1 hover:bg-muted transition-colors">
+              <X className="h-5 w-5 text-muted-foreground" />
+            </SheetClose>
+          </div>
         </SheetHeader>
 
-        <div className="flex-grow overflow-y-auto space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 py-12">
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
               <ShoppingCart className="h-16 w-16 text-muted-foreground/20" />
               <p className="text-lg text-muted-foreground">Your cart is empty</p>
               <Link href="/products">
@@ -54,21 +60,21 @@ export const CartDrawer = () => {
           ) : (
             <div className="space-y-4">
               {items.map((item) => (
-                <div key={item.variantId} className="flex gap-4 p-3 rounded-xl bg-muted/30 border border-border/50">
+                <div key={item.variantId} className="flex gap-4 p-3 rounded-xl bg-muted/20 border border-border/30">
                   <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0">
                     {item.imageUrl ? (
-                      <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
+                      <Image src={item.imageUrl} alt={item.name} fill className="object-contain p-1" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">N/A</div>
                     )}
                   </div>
-                  <div className="flex-grow flex flex-col justify-between">
+                  <div className="flex-1 flex flex-col justify-between min-w-0">
                     <div>
                       <h4 className="text-sm font-semibold text-primary truncate">{item.name}</h4>
-                      <p className="text-xs text-muted-foreground">₱{item.price.toLocaleString()}</p>
+                      <p className="text-sm font-medium text-accent-foreground mt-0.5">${item.price.toLocaleString()}</p>
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-2 bg-white rounded-full px-2 py-1 border border-border/50">
+                      <div className="flex items-center gap-1 bg-white rounded-full px-2 py-1 border border-border/50">
                         <button
                           className="h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted transition-colors cursor-pointer"
                           onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
@@ -98,13 +104,14 @@ export const CartDrawer = () => {
         </div>
 
         {items.length > 0 && (
-          <div className="mt-8 pt-6 border-t border-border/50 space-y-4">
-            <div className="flex justify-between items-center text-lg font-semibold">
+          <div className="px-6 pb-6 pt-4 border-t border-border/50 space-y-4 bg-white">
+            <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="text-primary font-bold">₱{totalPrice.toLocaleString()}</span>
+              <span className="text-xl font-bold text-primary">${totalPrice.toLocaleString()}</span>
             </div>
+            <p className="text-xs text-muted-foreground">Shipping and taxes calculated at checkout</p>
             <Link href="/checkout" className="block w-full" onClick={() => setOpen(false)}>
-              <Button className="w-full py-6 text-lg rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all">
+              <Button className="w-full py-6 text-base rounded-full shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all">
                 Proceed to Checkout
               </Button>
             </Link>

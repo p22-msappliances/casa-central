@@ -36,7 +36,7 @@ export const ProductGallery = ({ images }: ProductGalleryProps) => {
               src={images[currentIndex] || images[0]}
               alt={`Product image ${currentIndex + 1}`}
               fill
-              className="object-cover"
+              className="object-contain p-4"
               priority
             />
           ) : (

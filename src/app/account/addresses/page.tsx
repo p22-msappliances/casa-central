@@ -19,7 +19,9 @@ export default function AddressesPage() {
     async function fetchAddresses() {
       try {
         const result = await getUserAddresses();
-        if (result.success) setAddresses(result.data);
+        if (result.success && result.data) {
+          setAddresses(result.data || []);
+        }
       } catch (err) {
         console.error('Error fetching addresses:', err);
       } finally {
@@ -35,7 +37,9 @@ export default function AddressesPage() {
       const result = await updateAddress(editValue);
       if (result.success) {
         const refresh = await getUserAddresses();
-        if (refresh.success) setAddresses(refresh.data);
+        if (refresh.success && refresh.data) {
+          setAddresses(refresh.data || []);
+        }
         setEditingId(null);
       }
     } catch (err) {

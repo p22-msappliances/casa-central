@@ -15,6 +15,8 @@ import {
   Settings,
   ChevronLeft,
   LogOut,
+  FolderTree,
+  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { signOut } from '@/app/actions/auth';
@@ -22,6 +24,8 @@ import { signOut } from '@/app/actions/auth';
 const sidebarLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/categories', label: 'Categories', icon: FolderTree },
+  { href: '/admin/brands', label: 'Brands', icon: Tag },
   { href: '/admin/inventory', label: 'Inventory', icon: Store },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { href: '/admin/customers', label: 'Customers', icon: Users },

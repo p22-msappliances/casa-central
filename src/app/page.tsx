@@ -195,9 +195,9 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { name: 'Smart Refrigerator', price: '₱65,000', img: IMG.fridge, badge: 'Energy A+++' },
-              { name: 'Premium Washer', price: '₱40,000', img: IMG.washing, badge: 'Smart Ready' },
-              { name: 'Hi-Fi Soundbar', price: '₱25,000', img: IMG.audio, badge: 'Best Seller' },
+              { name: 'Smart Refrigerator', price: '$65,000', img: IMG.fridge, badge: 'Energy A+++' },
+              { name: 'Premium Washer', price: '$40,000', img: IMG.washing, badge: 'Smart Ready' },
+              { name: 'Hi-Fi Soundbar', price: '$25,000', img: IMG.audio, badge: 'Best Seller' },
             ].map((p) => (
               <div key={p.name} className="group p-0 rounded-2xl bg-white border border-border/50 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden text-left">
                 <div className="aspect-square overflow-hidden bg-muted/20 relative">

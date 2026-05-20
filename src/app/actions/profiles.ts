@@ -68,7 +68,7 @@ export async function deleteUser() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return { success: false, error: "Not authenticated" };
-  
+
   const { error } = await supabase
     .from("profiles")
     .delete()
@@ -81,4 +81,59 @@ export async function deleteUser() {
 
   await supabase.auth.signOut();
   return { success: true };
+}
+
+export async function getAdminCustomers(limit = 50, offset = 0) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || !["ADMIN", "SUPER_ADMIN"].includes(profile.role!)) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { data, error, count } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact" })
+    .eq("role", "CUSTOMER")
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true, data, total: count };
+}
+
+export async function updateUserRole(userId: string, role: Database["public"]["Enums"]["role_name"]) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  const { data: currentUser } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (currentUser?.role !== "SUPER_ADMIN") {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ role, updated_at: new Date().toISOString() })
+    .eq("id", userId)
+    .select()
+    .single();
+
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/admin/customers");
+  return { success: true, data };
 }

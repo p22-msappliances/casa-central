@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { CreditCard, Truck, CheckCircle } from 'lucide-react';
+import { CreditCard, Truck, CheckCircle, Loader2 } from 'lucide-react';
+import { createOrder, recordPayment } from '@/app/actions/orders';
+import { toast } from 'sonner';
 
 type Step = 'shipping' | 'payment' | 'review';
 
@@ -17,6 +19,7 @@ function CheckoutContent() {
   const { items, clearCart } = useCartStore();
   const router = useRouter();
   const [step, setStep] = useState<Step>('shipping');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [shippingInfo, setShippingInfo] = useState({
     firstName: '',
     lastName: '',
@@ -49,9 +52,50 @@ function CheckoutContent() {
     setStep('review');
   };
 
-  const handlePlaceOrder = () => {
-    clearCart();
-    router.push('/orders/confirmation');
+  const handlePlaceOrder = async () => {
+    setIsProcessing(true);
+    try {
+      const shippingAddress = `${shippingInfo.address}, ${shippingInfo.city}, ${shippingInfo.province} ${shippingInfo.zipCode}`;
+      
+      const orderResult = await createOrder({
+        items: items.map(item => ({
+          variant_id: item.variantId,
+          quantity: item.quantity,
+          price_at_purchase: item.price,
+        })),
+        shipping_address: shippingAddress,
+        total_amount: grandTotal,
+      });
+
+      if (!orderResult.success) {
+        toast.error(orderResult.error || 'Failed to create order');
+        setIsProcessing(false);
+        return;
+      }
+
+      const orderId = orderResult.data.id;
+
+      // Mock payment recording
+      const paymentResult = await recordPayment(orderId, {
+        amount: grandTotal,
+        method: 'Credit Card',
+        transaction_id: `TX-${crypto.randomUUID().substring(0, 8).toUpperCase()}`,
+      });
+
+      if (!paymentResult.success) {
+        toast.error(paymentResult.error || 'Payment failed, but order was created');
+      } else {
+        toast.success('Order placed successfully!');
+      }
+
+      clearCart();
+      router.push(`/orders/confirmation?orderId=${orderId}`);
+    } catch (error) {
+      console.error('Order error:', error);
+      toast.error('An unexpected error occurred while placing your order');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const updateShipping = (field: string, value: string) => {
@@ -78,22 +122,31 @@ function CheckoutContent() {
   return (
     <div className="container mx-auto px-4 py-12">
       {/* Steps Indicator */}
-      <div className="flex items-center justify-center gap-4 mb-12">
-        {(['shipping', 'payment', 'review'] as Step[]).map((s, i) => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-              step === s ? 'bg-primary text-primary-foreground shadow-lg' :
-              ['shipping', 'payment'].includes(step) && s === 'shipping' || step === 'payment' && s === 'shipping' || step === 'review' && s !== 'review' ? 'bg-primary/20 text-primary' :
-              'bg-secondary text-muted-foreground'
-            }`}>
-              {i + 1}
-            </div>
-            <span className={`text-sm font-medium capitalize hidden sm:block ${
-              step === s ? 'text-primary' : 'text-muted-foreground'
-            }`}>{s}</span>
-            {i < 2 && <Separator className="w-12 hidden sm:block" />}
-          </div>
-        ))}
+      <div className="flex items-center justify-center mb-12">
+        {(['shipping', 'payment', 'review'] as Step[]).map((s, i) => {
+          const stepIndex = ['shipping', 'payment', 'review'].indexOf(step);
+          const isCompleted = stepIndex > i;
+          const isCurrent = step === s;
+          return (
+            <React.Fragment key={s}>
+              {i > 0 && (
+                <div className={`w-16 sm:w-24 h-0.5 mx-2 transition-colors duration-300 ${isCompleted ? 'bg-primary' : 'bg-border'}`} />
+              )}
+              <div className="flex flex-col items-center gap-2">
+                <div className={`flex items-center justify-center w-10 h-10 shrink-0 rounded-full text-sm font-bold transition-all duration-300 ${
+                  isCurrent ? 'bg-primary text-primary-foreground shadow-lg ring-4 ring-primary/20' :
+                  isCompleted ? 'bg-primary/20 text-primary ring-2 ring-primary/30' :
+                  'bg-muted text-muted-foreground ring-2 ring-border'
+                }`}>
+                  {isCompleted ? <CheckCircle className="h-5 w-5" /> : i + 1}
+                </div>
+                <span className={`text-xs font-medium capitalize ${
+                  isCurrent ? 'text-primary font-semibold' : 'text-muted-foreground'
+                }`}>{s}</span>
+              </div>
+            </React.Fragment>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -190,7 +243,20 @@ function CheckoutContent() {
               </div>
               <div className="flex gap-4">
                 <Button type="button" variant="outline" className="rounded-full" onClick={() => setStep('payment')}>Back</Button>
-                <Button className="flex-1 rounded-full py-6 text-lg" onClick={handlePlaceOrder}>Place Order — {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(grandTotal))}</Button>
+                <Button 
+                  className="flex-1 rounded-full py-6 text-lg" 
+                  onClick={handlePlaceOrder}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Processing Order...
+                    </>
+                  ) : (
+                    `Place Order — ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(grandTotal))}`
+                  )}
+                </Button>
               </div>
             </div>
           )}

@@ -9,7 +9,7 @@ export default function TermsPage() {
         <h2 className="text-xl font-bold text-primary mt-8">General</h2>
         <p>By using the CASA CENTRAL website, you agree to these terms. If you do not agree, please refrain from using our services.</p>
         <h2 className="text-xl font-bold text-primary mt-8">Orders & Payment</h2>
-        <p>All prices are listed in Philippine Pesos (₱) and include applicable taxes. We reserve the right to modify prices at any time. Payment must be completed before order processing begins.</p>
+        <p>All prices are listed in US Dollars ($) and include applicable taxes. We reserve the right to modify prices at any time. Payment must be completed before order processing begins.</p>
         <h2 className="text-xl font-bold text-primary mt-8">Shipping & Delivery</h2>
         <p>Delivery times are estimates and not guaranteed. We are not liable for delays caused by third-party carriers or force majeure events.</p>
         <h2 className="text-xl font-bold text-primary mt-8">Returns & Refunds</h2>

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { createClient } from "@/lib/server";
+import { createClient, createAnonClient } from "@/lib/server";
 import { revalidatePath, unstable_cache } from "next/cache";
 import { Database } from "@/types/database.types";
 
@@ -268,7 +268,7 @@ export async function getProductsForInventory() {
 }
 
 export const getWarehouses = unstable_cache(async () => {
-  const supabase = await createClient();
+  const supabase = await createAnonClient();
   const { data, error } = await supabase
     .from("warehouses")
     .select("id, name, location, is_virtual, is_active")
@@ -521,7 +521,7 @@ export async function updateTransferStatus(transferId: string, status: "PENDING"
 
 // Vendors
 export const getVendors = unstable_cache(async () => {
-  const supabase = await createClient();
+  const supabase = await createAnonClient();
   const { data, error } = await supabase
     .from("vendors")
     .select("id, name, contact_email, contact_phone, address, notes, created_at")

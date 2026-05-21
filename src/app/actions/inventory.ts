@@ -7,7 +7,7 @@ import { Database } from "@/types/database.types";
 
 type Inventory = Database["public"]["Tables"]["inventory"]["Row"];
 
-export async function getInventory(limit = 50, offset = 0) {
+export async function getInventory(limit = 50, cursor?: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -23,14 +23,24 @@ export async function getInventory(limit = 50, offset = 0) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("inventory")
-    .select("*, product_variants(sku, products(name)), warehouses(*), vendors(name)", { count: "exact" })
-    .order("updated_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+    .select("id, variant_id, warehouse_id, quantity, low_stock_threshold, updated_at, product_variants(sku, products(name)), warehouses(name, is_virtual), vendors(name)", { count: "planned" })
+    .order("updated_at", { ascending: false });
+
+  if (cursor) {
+    query = query.lt('updated_at', cursor);
+  }
+
+  const { data, error, count } = await query.limit(limit + 1);
 
   if (error) return { success: false, error: error.message };
-  return { success: true, data, total: count };
+
+  const hasMore = data.length > limit;
+  const items = hasMore ? data.slice(0, -1) : data;
+  const nextCursor = hasMore ? items[items.length - 1].updated_at : null;
+
+  return { success: true, data: items, nextCursor, hasMore, estimatedTotal: count };
 }
 
 export async function updateInventoryQuantity(variantId: string, warehouseId: string, quantity: number) {
@@ -261,7 +271,7 @@ export async function getWarehouses() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("warehouses")
-    .select("*")
+    .select("id, name, location, is_virtual, is_active")
     .eq("is_active", true)
     .order("is_virtual")
     .order("name");
@@ -341,48 +351,75 @@ export async function createTransfer(data: {
     return { success: false, error: itemsError.message };
   }
 
-  // Deduct from source warehouse
-  for (const item of data.items) {
-    const { data: inv } = await supabase
+  // Batch fetch source and destination inventory
+  const sourceVariantIds = data.items.map(item => item.variant_id);
+  const [{ data: sourceInventory }, { data: destInventory }] = await Promise.all([
+    supabase
       .from("inventory")
-      .select("id, quantity")
-      .eq("variant_id", item.variant_id)
+      .select("id, variant_id, quantity")
       .eq("warehouse_id", data.from_warehouse_id)
-      .single();
+      .in("variant_id", sourceVariantIds),
+    supabase
+      .from("inventory")
+      .select("id, variant_id, quantity")
+      .eq("warehouse_id", data.to_warehouse_id)
+      .in("variant_id", sourceVariantIds),
+  ]);
 
+  // Group by variant_id
+  const sourceByVariant = new Map<string, any>();
+  for (const inv of sourceInventory || []) {
+    sourceByVariant.set(inv.variant_id, inv);
+  }
+  const destByVariant = new Map<string, any>();
+  for (const inv of destInventory || []) {
+    destByVariant.set(inv.variant_id, inv);
+  }
+
+  // Calculate source updates
+  const sourceUpdates: { id: string; quantity: number }[] = [];
+  for (const item of data.items) {
+    const inv = sourceByVariant.get(item.variant_id);
     if (inv) {
-      await supabase
-        .from("inventory")
-        .update({ quantity: Math.max(0, (inv.quantity || 0) - item.quantity) })
-        .eq("id", inv.id);
+      sourceUpdates.push({ id: inv.id, quantity: Math.max(0, (inv.quantity || 0) - item.quantity) });
     }
   }
 
-  // Add to destination warehouse (or create entry)
+  // Calculate dest updates/inserts
+  const destUpdates: { id: string; quantity: number }[] = [];
+  const destInserts: any[] = [];
   for (const item of data.items) {
-    const { data: existing } = await supabase
-      .from("inventory")
-      .select("id, quantity")
-      .eq("variant_id", item.variant_id)
-      .eq("warehouse_id", data.to_warehouse_id)
-      .single();
-
+    const existing = destByVariant.get(item.variant_id);
     if (existing) {
-      await supabase
-        .from("inventory")
-        .update({ quantity: (existing.quantity || 0) + item.quantity })
-        .eq("id", existing.id);
+      destUpdates.push({ id: existing.id, quantity: (existing.quantity || 0) + item.quantity });
     } else {
-      await supabase
-        .from("inventory")
-        .insert([{
-          id: crypto.randomUUID(),
-          variant_id: item.variant_id,
-          warehouse_id: data.to_warehouse_id,
-          quantity: item.quantity,
-          low_stock_threshold: 10,
-        }]);
+      destInserts.push({
+        id: crypto.randomUUID(),
+        variant_id: item.variant_id,
+        warehouse_id: data.to_warehouse_id,
+        quantity: item.quantity,
+        low_stock_threshold: 10,
+      });
     }
+  }
+
+  // Execute all updates in parallel
+  if (sourceUpdates.length > 0) {
+    const promises = sourceUpdates.map(u =>
+      supabase.from("inventory").update({ quantity: u.quantity }).eq("id", u.id)
+    );
+    await Promise.all(promises);
+  }
+
+  if (destUpdates.length > 0) {
+    const promises = destUpdates.map(u =>
+      supabase.from("inventory").update({ quantity: u.quantity }).eq("id", u.id)
+    );
+    await Promise.all(promises);
+  }
+
+  if (destInserts.length > 0) {
+    await supabase.from("inventory").insert(destInserts);
   }
 
   revalidatePath("/admin/inventory");
@@ -438,36 +475,33 @@ export async function updateTransferStatus(transferId: string, status: "PENDING"
     return { success: false, error: "Transfer already delivered" };
   }
 
-  // If cancelling a non-pending transfer, reverse inventory
+  // If cancelling a non-pending transfer, reverse inventory (batched)
   if (status === "CANCELLED" && transfer.status !== "PENDING") {
+    const variantIds = transfer.transfer_items.map((item: any) => item.variant_id);
+    const [{ data: sourceInventory }, { data: destInventory }] = await Promise.all([
+      supabase.from("inventory").select("id, variant_id, quantity").eq("warehouse_id", transfer.from_warehouse_id).in("variant_id", variantIds),
+      supabase.from("inventory").select("id, variant_id, quantity").eq("warehouse_id", transfer.to_warehouse_id).in("variant_id", variantIds),
+    ]);
+
+    const sourceByVariant = new Map<string, any>();
+    for (const inv of sourceInventory || []) sourceByVariant.set(inv.variant_id, inv);
+    const destByVariant = new Map<string, any>();
+    for (const inv of destInventory || []) destByVariant.set(inv.variant_id, inv);
+
+    const sourceUpdates: { id: string; quantity: number }[] = [];
+    const destUpdates: { id: string; quantity: number }[] = [];
     for (const item of transfer.transfer_items) {
-      const { data: sourceInv } = await supabase
-        .from("inventory")
-        .select("id, quantity")
-        .eq("variant_id", item.variant_id)
-        .eq("warehouse_id", transfer.from_warehouse_id)
-        .single();
+      const sourceInv = sourceByVariant.get(item.variant_id);
+      if (sourceInv) sourceUpdates.push({ id: sourceInv.id, quantity: (sourceInv.quantity || 0) + item.quantity });
+      const destInv = destByVariant.get(item.variant_id);
+      if (destInv) destUpdates.push({ id: destInv.id, quantity: Math.max(0, (destInv.quantity || 0) - item.quantity) });
+    }
 
-      if (sourceInv) {
-        await supabase
-          .from("inventory")
-          .update({ quantity: (sourceInv.quantity || 0) + item.quantity })
-          .eq("id", sourceInv.id);
-      }
-
-      const { data: destInv } = await supabase
-        .from("inventory")
-        .select("id, quantity")
-        .eq("variant_id", item.variant_id)
-        .eq("warehouse_id", transfer.to_warehouse_id)
-        .single();
-
-      if (destInv) {
-        await supabase
-          .from("inventory")
-          .update({ quantity: Math.max(0, (destInv.quantity || 0) - item.quantity) })
-          .eq("id", destInv.id);
-      }
+    if (sourceUpdates.length > 0) {
+      await Promise.all(sourceUpdates.map(u => supabase.from("inventory").update({ quantity: u.quantity }).eq("id", u.id)));
+    }
+    if (destUpdates.length > 0) {
+      await Promise.all(destUpdates.map(u => supabase.from("inventory").update({ quantity: u.quantity }).eq("id", u.id)));
     }
   }
 
@@ -490,7 +524,7 @@ export async function getVendors() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("vendors")
-    .select("*")
+    .select("id, name, contact_email, contact_phone, address, notes, created_at")
     .order("name");
 
   if (error) return { success: false, error: error.message };
@@ -622,55 +656,76 @@ export async function updatePOStatus(poId: string, status: "DRAFT" | "ORDERED" |
 
   if (fetchError || !po) return { success: false, error: "Purchase order not found" };
 
-  // When receiving, add inventory
+  // When receiving, add inventory (batched)
   if (status === "RECEIVED" && po.status !== "RECEIVED") {
-    for (const item of po.purchase_order_items) {
-      const { data: existing } = await supabase
-        .from("inventory")
-        .select("id, quantity")
-        .eq("variant_id", item.variant_id)
-        .eq("warehouse_id", po.warehouse_id)
-        .single();
+    const variantIds = po.purchase_order_items.map((item: any) => item.variant_id);
+    const { data: existingInventory } = await supabase
+      .from("inventory")
+      .select("id, variant_id, quantity")
+      .eq("warehouse_id", po.warehouse_id)
+      .in("variant_id", variantIds);
 
+    const invByVariant = new Map<string, any>();
+    for (const inv of existingInventory || []) {
+      invByVariant.set(inv.variant_id, inv);
+    }
+
+    const updates: { id: string; quantity: number; vendor_id: string }[] = [];
+    const inserts: any[] = [];
+    for (const item of po.purchase_order_items) {
+      const existing = invByVariant.get(item.variant_id);
       if (existing) {
-        await supabase
-          .from("inventory")
-          .update({ 
-            quantity: (existing.quantity || 0) + item.quantity,
-            vendor_id: po.vendor_id,
-          })
-          .eq("id", existing.id);
+        updates.push({ id: existing.id, quantity: (existing.quantity || 0) + item.quantity, vendor_id: po.vendor_id });
       } else {
-        await supabase
-          .from("inventory")
-          .insert([{
-            id: crypto.randomUUID(),
-            variant_id: item.variant_id,
-            warehouse_id: po.warehouse_id,
-            quantity: item.quantity,
-            vendor_id: po.vendor_id,
-            low_stock_threshold: 10,
-          }]);
+        inserts.push({
+          id: crypto.randomUUID(),
+          variant_id: item.variant_id,
+          warehouse_id: po.warehouse_id,
+          quantity: item.quantity,
+          vendor_id: po.vendor_id,
+          low_stock_threshold: 10,
+        });
       }
+    }
+
+    if (updates.length > 0) {
+      const promises = updates.map(u =>
+        supabase.from("inventory").update({ quantity: u.quantity, vendor_id: u.vendor_id }).eq("id", u.id)
+      );
+      await Promise.all(promises);
+    }
+    if (inserts.length > 0) {
+      await supabase.from("inventory").insert(inserts);
     }
   }
 
-  // If cancelling after receiving, reverse inventory
+  // If cancelling after receiving, reverse inventory (batched)
   if (status === "CANCELLED" && po.status === "RECEIVED") {
-    for (const item of po.purchase_order_items) {
-      const { data: inv } = await supabase
-        .from("inventory")
-        .select("id, quantity")
-        .eq("variant_id", item.variant_id)
-        .eq("warehouse_id", po.warehouse_id)
-        .single();
+    const variantIds = po.purchase_order_items.map((item: any) => item.variant_id);
+    const { data: existingInventory } = await supabase
+      .from("inventory")
+      .select("id, variant_id, quantity")
+      .eq("warehouse_id", po.warehouse_id)
+      .in("variant_id", variantIds);
 
+    const invByVariant = new Map<string, any>();
+    for (const inv of existingInventory || []) {
+      invByVariant.set(inv.variant_id, inv);
+    }
+
+    const updates: { id: string; quantity: number }[] = [];
+    for (const item of po.purchase_order_items) {
+      const inv = invByVariant.get(item.variant_id);
       if (inv) {
-        await supabase
-          .from("inventory")
-          .update({ quantity: Math.max(0, (inv.quantity || 0) - item.quantity) })
-          .eq("id", inv.id);
+        updates.push({ id: inv.id, quantity: Math.max(0, (inv.quantity || 0) - item.quantity) });
       }
+    }
+
+    if (updates.length > 0) {
+      const promises = updates.map(u =>
+        supabase.from("inventory").update({ quantity: u.quantity }).eq("id", u.id)
+      );
+      await Promise.all(promises);
     }
   }
 

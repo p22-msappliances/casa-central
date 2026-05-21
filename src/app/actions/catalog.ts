@@ -15,6 +15,7 @@ interface GetProductsParams {
   priceRange?: [number, number];
   limit?: number;
   offset?: number;
+  cursor?: string;
 }
 
 interface ProductWithStock extends ProductRow {
@@ -29,13 +30,14 @@ export async function getProducts({
   searchTerm, 
   priceRange,
   limit = 24,
-  offset = 0 
+  offset,
+  cursor
 }: GetProductsParams = {}) {
   const supabase = await createAnonClient();
   
   let query = supabase
     .from('products')
-    .select('*, product_variants(*, inventory(quantity))', { count: 'planned' });
+    .select('id, name, slug, base_price, image_url, category_id, brand_id, created_at, product_variants(id, price, inventory(quantity))', { count: 'planned' });
 
   if (categoryId) query = query.eq('category_id', categoryId);
   if (brandId) query = query.eq('brand_id', brandId);
@@ -44,9 +46,13 @@ export async function getProducts({
     query = query.gte('base_price', priceRange[0]).lte('base_price', priceRange[1]);
   }
 
+  if (cursor) {
+    query = query.lt('created_at', cursor);
+  }
+
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
+    .range(offset !== undefined ? offset : 0, offset !== undefined ? offset + limit - 1 : limit - 1);
 
   if (error) return { success: false, error: error.message };
 
@@ -57,9 +63,11 @@ export async function getProducts({
     return { ...product, total_stock: totalStock, is_in_stock: totalStock > 0 };
   }).filter((p) => p.is_in_stock);
 
+  const nextCursor = items.length > 0 ? items[items.length - 1].created_at : null;
+
   return { 
     success: true, 
-    data: { items, total: count || 0, hasMore: (count || 0) > offset + limit }
+    data: { items, nextCursor, total: count || 0, hasMore: (count || 0) > (offset !== undefined ? offset + limit : limit) }
   };
 }
 

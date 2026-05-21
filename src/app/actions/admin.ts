@@ -7,36 +7,33 @@ import { Database } from '@/types/database.types';
 export async function getAdminStats() {
   const supabase = await createClient();
 
-  const [revenue, orders, products, customers] = await Promise.all([
+  const [revenueResult, orderCountResult, productCountResult, customerCountResult] = await Promise.all([
     supabase.from('orders').select('total_amount'),
-    supabase.from('orders').select('id'),
-    supabase.from('products').select('id'),
-    supabase.from('profiles').select('id').eq('role', 'CUSTOMER'),
+    supabase.from('orders').select('*', { count: 'exact', head: true }),
+    supabase.from('products').select('*', { count: 'exact', head: true }),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'CUSTOMER'),
   ]);
 
-  const totalRevenue = revenue.data?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0;
-  const orderCount = orders.data?.length || 0;
-  const productCount = products.data?.length || 0;
-  const customerCount = customers.data?.length || 0;
+  const totalRevenue = revenueResult.data?.reduce((acc, curr) => acc + Number(curr.total_amount), 0) || 0;
 
   return {
     success: true,
     data: {
       totalRevenue,
-      orderCount,
-      productCount,
-      customerCount,
+      orderCount: orderCountResult.count || 0,
+      productCount: productCountResult.count || 0,
+      customerCount: customerCountResult.count || 0,
     }
   };
 }
 
-export async function getAdminOrders() {
+export async function getAdminOrders(limit = 50, cursor?: string) {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('orders')
     .select(`
-      *,
+      id, user_id, total_amount, status, created_at,
       profiles (
         first_name,
         last_name,
@@ -45,14 +42,24 @@ export async function getAdminOrders() {
       order_items (
         count
       )
-    `)
+    `, { count: 'planned' })
     .order('created_at', { ascending: false });
+
+  if (cursor) {
+    query = query.lt('created_at', cursor);
+  }
+
+  const { data, error, count } = await query.limit(limit + 1);
 
   if (error) {
     return { success: false, error: error.message };
   }
 
-  const orders = data.map(order => ({
+  const hasMore = data.length > limit;
+  const items = hasMore ? data.slice(0, -1) : data;
+  const nextCursor = hasMore ? items[items.length - 1].created_at : null;
+
+  const orders = items.map((order: any) => ({
     id: order.id,
     customer: order.profiles
       ? `${order.profiles.first_name || ''} ${order.profiles.last_name || ''}`.trim() || order.profiles.email
@@ -63,7 +70,7 @@ export async function getAdminOrders() {
     items: order.order_items?.[0]?.count || 0,
   }));
 
-  return { success: true, data: orders };
+  return { success: true, data: orders, nextCursor, hasMore, estimatedTotal: count };
 }
 
 export async function getAdminOrderById(id: string) {

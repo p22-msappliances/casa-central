@@ -57,34 +57,59 @@ export async function createOrder(orderData: {
 
   const orderId = crypto.randomUUID();
 
-  // 1. Check and Decrement Inventory
-  for (const item of orderData.items) {
-    const { data: invRows } = await supabase
-      .from('inventory')
-      .select('id, quantity, product_variants(sku, price, products(id, name, slug))')
-      .eq('variant_id', item.variant_id);
+  // 1. Batch fetch ALL inventory records in ONE query
+  const variantIds = orderData.items.map(item => item.variant_id);
+  const { data: allInventory, error: invFetchError } = await supabase
+    .from('inventory')
+    .select('id, variant_id, quantity, product_variants(sku, price, products(id, name, slug))')
+    .in('variant_id', variantIds);
 
-    const totalAvailable = invRows?.reduce((sum, row) => sum + (row.quantity || 0), 0) || 0;
+  if (invFetchError) return { success: false, error: invFetchError.message };
+
+  // Group by variant_id in memory
+  const inventoryByVariant = new Map<string, any[]>();
+  for (const inv of allInventory || []) {
+    const existing = inventoryByVariant.get(inv.variant_id) || [];
+    existing.push(inv);
+    inventoryByVariant.set(inv.variant_id, existing);
+  }
+
+  // Check stock for ALL items in memory
+  for (const item of orderData.items) {
+    const invRows = inventoryByVariant.get(item.variant_id) || [];
+    const totalAvailable = invRows.reduce((sum, row) => sum + (row.quantity || 0), 0);
 
     if (totalAvailable < item.quantity) {
-      const productName = (invRows?.[0] as any)?.product_variants?.products?.name || `Variant ${item.variant_id.slice(0, 8)}`;
+      const productName = invRows[0]?.product_variants?.products?.name || `Variant ${item.variant_id.slice(0, 8)}`;
       return { success: false, error: `Insufficient stock for "${productName}". Available: ${totalAvailable}, Requested: ${item.quantity}` };
     }
+  }
 
-    // Decrement from warehouses with stock (FIFO)
+  // Calculate all inventory updates in memory
+  const inventoryUpdates: { id: string; quantity: number }[] = [];
+  for (const item of orderData.items) {
     let remaining = item.quantity;
-    for (const inv of (invRows || []).sort((a, b) => (b.quantity || 0) - (a.quantity || 0))) {
+    const invRows = (inventoryByVariant.get(item.variant_id) || [])
+      .sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+
+    for (const inv of invRows) {
       if (remaining <= 0) break;
       const take = Math.min(remaining, inv.quantity || 0);
       if (take > 0) {
-        const { error: invError } = await supabase
-          .from('inventory')
-          .update({ quantity: (inv.quantity || 0) - take })
-          .eq('id', inv.id);
-
-        if (invError) return { success: false, error: `Failed to update inventory: ${invError.message}` };
+        inventoryUpdates.push({ id: inv.id, quantity: (inv.quantity || 0) - take });
         remaining -= take;
       }
+    }
+  }
+
+  // Execute all inventory updates in parallel
+  if (inventoryUpdates.length > 0) {
+    const updatePromises = inventoryUpdates.map(u =>
+      supabase.from('inventory').update({ quantity: u.quantity }).eq('id', u.id)
+    );
+    const results = await Promise.all(updatePromises);
+    for (const { error: invError } of results) {
+      if (invError) return { success: false, error: `Failed to update inventory: ${invError.message}` };
     }
   }
 
@@ -98,12 +123,12 @@ export async function createOrder(orderData: {
       total_amount: orderData.total_amount,
       status: 'PENDING',
     }])
-    .select()
+    .select('id, user_id, total_amount, status, created_at')
     .single();
 
   if (orderError) return { success: false, error: orderError.message };
 
-  // 3. Create Order Items
+  // 3. Create Order Items (batch insert)
   const orderItems = orderData.items.map(item => ({
     id: crypto.randomUUID(),
     order_id: orderId,
@@ -117,9 +142,7 @@ export async function createOrder(orderData: {
     .insert(orderItems);
 
   if (itemsError) {
-    // Rollback: ideally would use a DB transaction, but since we can't easily here, we just delete the order
     await supabase.from('orders').delete().eq('id', orderId);
-    // Note: Inventory rollback would be complex here without a real transaction
     return { success: false, error: itemsError.message };
   }
 
@@ -185,7 +208,7 @@ export async function recordPayment(orderId: string, paymentData: {
   return { success: true, data };
 }
 
-export async function getAdminOrders(limit = 50, offset = 0) {
+export async function getAdminOrders(limit = 50, cursor?: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -201,14 +224,24 @@ export async function getAdminOrders(limit = 50, offset = 0) {
     return { success: false, error: 'Unauthorized' };
   }
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from('orders')
-    .select('*, profiles(first_name, last_name, email), order_items(*)', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
+    .select('id, user_id, total_amount, status, created_at, updated_at, shipping_address, profiles(first_name, last_name, email), order_items(count)', { count: 'planned' })
+    .order('created_at', { ascending: false });
+
+  if (cursor) {
+    query = query.lt('created_at', cursor);
+  }
+
+  const { data, error, count } = await query.limit(limit + 1);
 
   if (error) return { success: false, error: error.message };
-  return { success: true, data, total: count };
+
+  const hasMore = data.length > limit;
+  const items = hasMore ? data.slice(0, -1) : data;
+  const nextCursor = hasMore ? items[items.length - 1].created_at : null;
+
+  return { success: true, data: items, nextCursor, hasMore, estimatedTotal: count };
 }
 
 export async function deleteOrder(orderId: string) {

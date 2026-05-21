@@ -8,7 +8,7 @@ export async function getPromotions() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('promotions')
-    .select('*')
+    .select('id, name, code, discount_type, discount_value, start_date, end_date, active, created_at')
     .order('created_at', { ascending: false });
 
   if (error) return { success: false, error: error.message };

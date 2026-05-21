@@ -5,7 +5,7 @@ export const JsonLd = () => {
     '@context': 'https://schema.org',
     '@type': 'Store',
     name: 'CASA CENTRAL',
-    description: 'Premium appliances and audio systems for modern Filipino homes.',
+    description: 'Premium appliances and audio systems for modern homes.',
     url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     logo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/logo.png`,
     address: {

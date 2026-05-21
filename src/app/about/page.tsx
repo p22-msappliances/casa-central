@@ -16,17 +16,17 @@ export default function AboutPage() {
     <div className="container mx-auto px-4 py-16 space-y-24">
       <section className="text-center space-y-6 max-w-4xl mx-auto">
         <h1 className="text-5xl md:text-7xl font-bold text-primary font-heading leading-tight">
-          Transforming Filipino Homes
+          Transforming Modern Homes
         </h1>
         <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-          CASA CENTRAL brings premium appliances and audio to modern Filipino households.
+          CASA CENTRAL brings premium appliances and audio to modern households.
         </p>
       </section>
       <section className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
           <h2 className="text-4xl font-bold text-primary font-heading">Our Story</h2>
           <p className="text-muted-foreground leading-relaxed">
-            Founded with a vision to elevate the modern Filipino home, CASA CENTRAL started as a passion for beautiful technology.
+            Founded with a vision to elevate the modern home, CASA CENTRAL started as a passion for beautiful technology.
           </p>
         </div>
         <div className="rounded-2xl overflow-hidden shadow-lg border border-border/40 relative aspect-[4/3]">

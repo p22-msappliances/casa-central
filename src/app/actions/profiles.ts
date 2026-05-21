@@ -15,7 +15,7 @@ export async function getUserProfile() {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, first_name, last_name, email, phone_number, address, role, created_at, updated_at")
     .eq("id", user.id)
     .single();
 
@@ -31,7 +31,7 @@ export async function readProfiles() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, first_name, last_name, email, phone_number, role, updated_at")
     .order("updated_at", { ascending: false });
 
   if (error) {
@@ -84,7 +84,7 @@ export async function deleteUser() {
   return { success: true };
 }
 
-export async function getAdminCustomers(limit = 50, offset = 0) {
+export async function getAdminCustomers(limit = 50, cursor?: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -100,15 +100,25 @@ export async function getAdminCustomers(limit = 50, offset = 0) {
     return { success: false, error: "Unauthorized" };
   }
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("profiles")
-    .select("*", { count: "exact" })
+    .select("id, first_name, last_name, email, phone_number, role, created_at, updated_at", { count: "planned" })
     .eq("role", "CUSTOMER")
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+    .order("created_at", { ascending: false });
+
+  if (cursor) {
+    query = query.lt('created_at', cursor);
+  }
+
+  const { data, error, count } = await query.limit(limit + 1);
 
   if (error) return { success: false, error: error.message };
-  return { success: true, data, total: count };
+
+  const hasMore = data.length > limit;
+  const items = hasMore ? data.slice(0, -1) : data;
+  const nextCursor = hasMore ? items[items.length - 1].created_at : null;
+
+  return { success: true, data: items, nextCursor, hasMore, estimatedTotal: count };
 }
 
 export async function updateUserRole(userId: string, role: Database["public"]["Enums"]["role_name"]) {

@@ -149,7 +149,7 @@ export default function HomePage() {
       <section className="py-16 bg-white">
         <StorytellingSection
           title="Elevate Your Comfort"
-          description="Experience unparalleled climate control with our premium air conditioning and smart home solutions. Designed for the modern Filipino home."
+          description="Experience unparalleled climate control with our premium air conditioning and smart home solutions. Designed for the modern home."
           imageUrl={IMG.story1}
           direction="right"
         />

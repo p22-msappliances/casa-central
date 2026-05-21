@@ -56,7 +56,7 @@ export async function getProducts() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('products')
-    .select('*')
+    .select('id, name, slug, base_price, image_url, brand_id, category_id, created_at, updated_at')
     .order('created_at', { ascending: false });
 
   if (error) {

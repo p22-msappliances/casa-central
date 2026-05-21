@@ -67,7 +67,7 @@ function CheckoutContent() {
         total_amount: grandTotal,
       });
 
-      if (!orderResult.success) {
+      if (!orderResult.success || !orderResult.data) {
         toast.error(orderResult.error || 'Failed to create order');
         setIsProcessing(false);
         return;

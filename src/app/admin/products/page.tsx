@@ -81,7 +81,7 @@ export default function AdminProductsPage() {
     if (!searchTerm.trim()) return products;
     const lower = searchTerm.toLowerCase();
     return products.filter(
-      (p: Product) =>
+      (p: any) =>
         p.name.toLowerCase().includes(lower) ||
         p.slug.toLowerCase().includes(lower)
     );
@@ -194,7 +194,7 @@ export default function AdminProductsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((product: Product) => (
+                filteredProducts.map((product: any) => (
                   <tr
                     key={product.id}
                     className="border-b border-secondary/10 hover:bg-secondary/10 transition-colors"

@@ -66,6 +66,50 @@ export async function getAdminOrders() {
   return { success: true, data: orders };
 }
 
+export async function getAdminOrderById(id: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      profiles (
+        id,
+        first_name,
+        last_name,
+        email,
+        phone
+      ),
+      order_items (
+        *,
+        product_variants (
+          sku,
+          price,
+          products (
+            id,
+            name,
+            slug,
+            image_url
+          )
+        )
+      ),
+      payments (
+        *,
+        created_at,
+        amount,
+        method,
+        status,
+        transaction_id
+      )
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) return { success: false, error: error.message };
+
+  return { success: true, data };
+}
+
 export async function getCMSContent(key: string) {
   const supabase = await createClient();
 

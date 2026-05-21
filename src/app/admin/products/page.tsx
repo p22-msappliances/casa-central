@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Plus, Search, Edit, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Loader2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +22,9 @@ import {
   updateProduct,
   deleteProduct,
   searchProducts,
+  createProductVariant,
+  deleteProductVariant,
+  getProductVariants,
 } from "@/app/actions/products";
 import { getBrands, getCategories } from "@/app/actions/catalog";
 import { Database } from "@/types/database.types";
@@ -34,6 +37,11 @@ export default function AdminProductsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<any>({});
+  const [variantProduct, setVariantProduct] = useState<any>(null);
+  const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
+  const [variants, setVariants] = useState<any[]>([]);
+  const [variantsLoading, setVariantsLoading] = useState(false);
+  const [newVariant, setNewVariant] = useState({ sku: '', price: '', attributes: '{}', image_url: '' });
 
   const { data: products = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["admin-products"],
@@ -142,6 +150,51 @@ export default function AdminProductsPage() {
     setIsDialogOpen(true);
   }
 
+  async function openVariantDialog(product: any) {
+    setVariantProduct(product);
+    setNewVariant({ sku: '', price: '', attributes: '{}', image_url: '' });
+    setIsVariantDialogOpen(true);
+    setVariantsLoading(true);
+    const result = await getProductVariants(product.id);
+    if (result.success) setVariants(result.data || []);
+    else toast.error('Failed to load variants');
+    setVariantsLoading(false);
+  }
+
+  async function handleAddVariant() {
+    if (!newVariant.sku || !newVariant.price) {
+      toast.error('SKU and price are required');
+      return;
+    }
+    let attributes = {};
+    try { attributes = JSON.parse(newVariant.attributes); } catch { attributes = {}; }
+    const result = await createProductVariant({
+      product_id: variantProduct.id,
+      sku: newVariant.sku,
+      price: parseFloat(newVariant.price),
+      attributes,
+      image_url: newVariant.image_url || null,
+    });
+    if (result.success) {
+      toast.success('Variant created');
+      setNewVariant({ sku: '', price: '', attributes: '{}', image_url: '' });
+      const res = await getProductVariants(variantProduct.id);
+      if (res.success) setVariants(res.data || []);
+    } else {
+      toast.error(result.error || 'Failed to create variant');
+    }
+  }
+
+  async function handleDeleteVariant(id: string) {
+    const result = await deleteProductVariant(id);
+    if (result.success) {
+      toast.success('Variant deleted');
+      setVariants(prev => prev.filter(v => v.id !== id));
+    } else {
+      toast.error(result.error || 'Failed to delete variant');
+    }
+  }
+
   if (loadingProducts) {
     return (
       <div className="flex justify-center items-center h-full py-20">
@@ -211,6 +264,15 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full"
+                          title="Variants"
+                          onClick={() => openVariantDialog(product)}
+                        >
+                          <Package className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -359,6 +421,77 @@ export default function AdminProductsPage() {
               {editingProduct ? "Update Product" : "Create Product"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-card border-secondary/30 text-primary">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Variants: {variantProduct?.name}</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Manage product variants (SKU, price, attributes).
+            </DialogDescription>
+          </DialogHeader>
+
+          {variantsLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : (
+            <div className="space-y-4">
+              {variants.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">No variants yet.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-muted-foreground border-b border-secondary/30">
+                      <th className="pb-2 font-medium">SKU</th>
+                      <th className="pb-2 font-medium">Price</th>
+                      <th className="pb-2 font-medium">Attributes</th>
+                      <th className="pb-2 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {variants.map((v: any) => (
+                      <tr key={v.id} className="border-b border-secondary/10">
+                        <td className="py-2 text-primary">{v.sku}</td>
+                        <td className="py-2">${Number(v.price).toLocaleString()}</td>
+                        <td className="py-2 text-xs text-muted-foreground max-w-[200px] truncate">{JSON.stringify(v.attributes)}</td>
+                        <td className="py-2">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteVariant(v.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              <div className="border-t border-secondary/30 pt-4 space-y-3">
+                <h4 className="text-sm font-semibold">Add Variant</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">SKU *</Label>
+                    <Input size={1} className="h-9 text-sm" value={newVariant.sku} onChange={e => setNewVariant({...newVariant, sku: e.target.value})} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Price *</Label>
+                    <Input size={1} className="h-9 text-sm" type="number" value={newVariant.price} onChange={e => setNewVariant({...newVariant, price: e.target.value})} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Attributes (JSON)</Label>
+                    <Input size={1} className="h-9 text-sm" value={newVariant.attributes} onChange={e => setNewVariant({...newVariant, attributes: e.target.value})} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Image URL</Label>
+                    <Input size={1} className="h-9 text-sm" value={newVariant.image_url} onChange={e => setNewVariant({...newVariant, image_url: e.target.value})} />
+                  </div>
+                </div>
+                <Button size="sm" onClick={handleAddVariant} className="mt-2">
+                  <Plus className="h-3 w-3 mr-1" /> Add Variant
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

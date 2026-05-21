@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getProductBySlug } from '@/app/actions/catalog';
+import { getProductReviews } from '@/app/actions/reviews';
 import ProductDetailClient from './ProductDetailClient';
 
 interface ProductPageProps {
@@ -17,5 +18,8 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  return <ProductDetailClient product={result.data} />;
+  const reviewsResult = await getProductReviews(result.data.id);
+  const reviews = reviewsResult.success ? (reviewsResult.data || []) : [];
+
+  return <ProductDetailClient product={result.data} initialReviews={reviews} />;
 }

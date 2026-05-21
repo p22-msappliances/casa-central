@@ -121,6 +121,15 @@ export async function getAdminCustomers(limit = 50, cursor?: string) {
   return { success: true, data: items, nextCursor, hasMore, estimatedTotal: count };
 }
 
+export async function updateUserRoleForm(formData: FormData) {
+  const userId = formData.get('user_id') as string;
+  const role = formData.get('role') as Database["public"]["Enums"]["role_name"];
+  if (!userId || !role) return { success: false, error: "Missing fields" };
+  const result = await updateUserRole(userId, role);
+  if (result.success) revalidatePath('/admin/customers');
+  return result;
+}
+
 export async function updateUserRole(userId: string, role: Database["public"]["Enums"]["role_name"]) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

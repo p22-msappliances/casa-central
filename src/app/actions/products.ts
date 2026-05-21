@@ -282,3 +282,15 @@ export async function deleteProductVariant(id: string) {
   revalidatePath('/admin/products');
   return { success: true };
 }
+
+export async function getProductVariants(productId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('product_variants')
+    .select('*')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false });
+
+  if (error) return { success: false, error: error.message };
+  return { success: true, data: data || [] };
+}

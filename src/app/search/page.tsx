@@ -1,30 +1,38 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, X } from 'lucide-react';
+import { Search, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { searchProducts } from '@/app/actions/products';
 
 export const dynamic = 'force-dynamic';
 
-const mockResults = [
-  { id: '1', name: 'Premium Refrigerator', slug: 'premium-refrigerator', price: 65000, category: 'Refrigerators', imageUrl: '' },
-  { id: '2', name: 'Smart Washing Machine', slug: 'smart-washing-machine', price: 40000, category: 'Washing Machines', imageUrl: '' },
-  { id: '3', name: 'High-Fidelity Soundbar', slug: 'high-fidelity-soundbar', price: 25000, category: 'Audio Systems', imageUrl: '' },
-  { id: '4', name: '4K QLED TV 55"', slug: '4k-qled-tv', price: 75000, category: 'TVs', imageUrl: '' },
-  { id: '5', name: 'Inverter Air Conditioner', slug: 'inverter-air-conditioner', price: 35000, category: 'Air Conditioners', imageUrl: '' },
-];
-
 export default function SearchPage() {
   const [query, setQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
-  const filteredResults = query
-    ? mockResults.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()))
-    : [];
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      setSearched(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      const result = await searchProducts(query, 20);
+      setResults(result.success && result.data ? result.data : []);
+      setSearched(true);
+      setLoading(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   return (
     <div className="container mx-auto px-4 py-16 space-y-8">
@@ -47,36 +55,48 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {query && (
+      {loading && (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
+
+      {!loading && searched && (
         <div className="max-w-3xl mx-auto space-y-4">
-          <p className="text-sm text-muted-foreground">{filteredResults.length} result(s) for &ldquo;{query}&rdquo;</p>
-          {filteredResults.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{results.length} result(s) for &ldquo;{query}&rdquo;</p>
+          {results.length === 0 ? (
             <div className="text-center py-16 space-y-4">
               <Search className="h-16 w-16 text-muted-foreground/30 mx-auto" />
               <p className="text-lg text-muted-foreground">No products found. Try a different search term.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredResults.map((product) => (
+              {results.map((product: any) => (
                 <Link key={product.id} href={`/products/${product.slug}`}>
                   <div className="flex items-center gap-4 p-4 rounded-xl bg-card border border-secondary/30 hover:border-primary/30 hover:shadow-lg transition-all">
                     <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted shrink-0">
-                      {product.imageUrl ? (
-                        <Image src={product.imageUrl} alt={product.name} fill className="object-cover" />
+                      {product.image_url ? (
+                        <Image src={product.image_url} alt={product.name} fill className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">N/A</div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-primary truncate">{product.name}</p>
-                      <p className="text-xs text-muted-foreground">{product.category}</p>
                     </div>
-                    <p className="font-bold text-accent-foreground text-sm">${product.price.toLocaleString()}</p>
+                    <p className="font-bold text-accent-foreground text-sm">${Number(product.base_price).toLocaleString()}</p>
                   </div>
                 </Link>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {!query && !searched && (
+        <div className="text-center py-16 text-muted-foreground">
+          <Search className="h-16 w-16 mx-auto mb-4 opacity-30" />
+          <p>Type to search our catalog</p>
         </div>
       )}
     </div>

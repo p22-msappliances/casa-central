@@ -25,7 +25,7 @@ export const Navbar = () => {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = React.useMemo(() => createClient(), []);
 
   useEffect(() => {
     const getUserAndRole = async () => {
@@ -131,19 +131,19 @@ export const Navbar = () => {
           {!loading && user ? (
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <div className={cn(buttonVariants({ variant: 'ghost', size: 'icon', className: 'rounded-full hover:bg-brand-gold/10' }))}>
+                <button type="button" className={cn(buttonVariants({ variant: 'ghost', size: 'icon', className: 'rounded-full hover:bg-brand-gold/10' }))}>
                   <User className="h-5 w-5 text-brand-gold" />
-                </div>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
+                    <Link href="/account/settings" className="flex flex-col space-y-1 hover:text-brand-gold transition-colors">
                       <p className="text-sm font-medium leading-none">{user.email}</p>
                       <p className="text-xs leading-none text-muted-foreground">
                         Account Settings
                       </p>
-                    </div>
+                    </Link>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push('/account/profile')} className="cursor-pointer">

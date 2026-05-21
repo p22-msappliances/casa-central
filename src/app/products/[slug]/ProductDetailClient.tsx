@@ -6,16 +6,22 @@ import { ProductGallery } from '@/components/ui/ProductGallery';
 import { ProductSpecifications } from '@/components/ui/ProductSpecifications';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, ShieldCheck, Truck, RotateCcw, Minus, Plus } from 'lucide-react';
+import { ShoppingCart, ShieldCheck, Truck, RotateCcw, Minus, Plus, Star } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { toast } from 'sonner';
+import { addReview, getProductReviews } from '@/app/actions/reviews';
 
 interface ProductDetailClientProps {
   product: any;
+  initialReviews: any[];
 }
 
-export default function ProductDetailClient({ product }: ProductDetailClientProps) {
+export default function ProductDetailClient({ product, initialReviews }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
+  const [reviews, setReviews] = useState(initialReviews);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const addItem = useCartStore(state => state.addItem);
   const totalStock = product.total_stock || 0;
   const isInStock = totalStock > 0;
@@ -47,6 +53,26 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
   const handleIncrement = () => setQuantity(prev => Math.min(prev + 1, totalStock));
   const handleDecrement = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    const fd = new FormData();
+    fd.set('productId', product.id);
+    fd.set('rating', reviewRating.toString());
+    fd.set('comment', reviewComment);
+    const result = await addReview(fd);
+    setSubmitting(false);
+    if (result.success) {
+      toast.success('Review submitted');
+      setReviewComment('');
+      setReviewRating(5);
+      const reviewsResult = await getProductReviews(product.id);
+      if (reviewsResult.success && reviewsResult.data) setReviews(reviewsResult.data);
+    } else {
+      toast.error(result.error || 'Failed to submit review');
+    }
+  };
 
   const galleryImages = product.image_url ? [product.image_url] : [];
 
@@ -125,6 +151,62 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
       <div className="mt-24 border-t border-secondary/30 pt-12">
         <ProductSpecifications specs={specifications} />
+      </div>
+
+      <div className="mt-24 border-t border-secondary/30 pt-12">
+        <h2 className="text-3xl font-bold text-primary font-heading mb-8">Customer Reviews</h2>
+
+        {reviews.length > 0 ? (
+          <div className="space-y-6 mb-12">
+            {reviews.map((review: any) => (
+              <div key={review.id} className="p-6 rounded-2xl bg-white border border-border/60 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map(s => (
+                      <Star key={s} className={`h-4 w-4 ${s <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                    ))}
+                  </div>
+                  <span className="text-sm font-semibold text-primary">
+                    {review.profiles?.first_name || review.profiles?.last_name ? `${review.profiles.first_name || ''} ${review.profiles.last_name || ''}`.trim() : 'Anonymous'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{new Date(review.created_at).toLocaleDateString()}</span>
+                </div>
+                {review.comment && <p className="text-muted-foreground">{review.comment}</p>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground mb-12">No reviews yet. Be the first to review this product!</p>
+        )}
+
+        <div className="max-w-xl">
+          <h3 className="text-xl font-bold text-primary font-heading mb-4">Write a Review</h3>
+          <form onSubmit={handleSubmitReview} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">Rating</label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map(s => (
+                  <button key={s} type="button" onClick={() => setReviewRating(s)}>
+                    <Star className={`h-6 w-6 ${s <= reviewRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">Comment (optional)</label>
+              <textarea
+                value={reviewComment}
+                onChange={e => setReviewComment(e.target.value)}
+                rows={4}
+                className="w-full px-4 py-3 rounded-xl border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Share your experience with this product..."
+              />
+            </div>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Submit Review'}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

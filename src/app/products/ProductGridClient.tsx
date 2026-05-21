@@ -49,6 +49,7 @@ export default function ProductGridClient({
   const [searchTerm, setSearchTerm] = useState(defaultSearch || '');
   const [debouncedSearch, setDebouncedSearch] = useState(defaultSearch || '');
   const [currentPage, setCurrentPage] = useState(initialPage);
+  const [priceRange, setPriceRange] = useState<[number, number] | undefined>(undefined);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
@@ -56,12 +57,13 @@ export default function ProductGridClient({
   }, [searchTerm]);
 
   const { data: productData, isLoading } = useQuery({
-    queryKey: ['products', categoryId, brandId, debouncedSearch, currentPage],
+    queryKey: ['products', categoryId, brandId, debouncedSearch, currentPage, priceRange?.[0], priceRange?.[1]],
     queryFn: async () => {
       const result = await getProducts({
         categoryId: categoryId || undefined,
         brandId: brandId || undefined,
         searchTerm: debouncedSearch || undefined,
+        priceRange,
         limit,
         offset: (currentPage - 1) * limit,
       });
@@ -92,6 +94,13 @@ export default function ProductGridClient({
       setBrandId(newFilters.brandId);
       setCurrentPage(1);
       updateURL({ brand: newFilters.brandId, page: '1' });
+    }
+    if (newFilters.price !== undefined && Array.isArray(newFilters.price)) {
+      setPriceRange(newFilters.price as [number, number]);
+      setCurrentPage(1);
+    }
+    if (newFilters.energyRating !== undefined) {
+      console.log('Energy rating filter:', newFilters.energyRating);
     }
   }, [updateURL]);
 

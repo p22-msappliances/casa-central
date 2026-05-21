@@ -7,6 +7,14 @@ import { revalidatePath } from 'next/cache';
 
 type Review = Database['public']['Tables']['reviews']['Row'];
 
+export async function addReview(formData: FormData) {
+  const productId = formData.get('productId') as string;
+  const rating = parseInt(formData.get('rating') as string, 10);
+  const comment = formData.get('comment') as string;
+  if (!productId || !rating) return { success: false, error: 'Missing fields' };
+  return createReview(productId, { rating, comment: comment || undefined });
+}
+
 export async function getProductReviews(productId: string) {
   const supabase = await createClient();
 

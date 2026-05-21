@@ -2,6 +2,8 @@ import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { MoveRight, ArrowRight, Star, ShieldCheck, Truck, HeadphonesIcon } from 'lucide-react';
+import { subscribeNewsletter } from '@/app/actions/misc';
+import { getCategories } from '@/app/actions/catalog';
 
 const IMG = {
   hero: 'https://images.pexels.com/photos/36777543/pexels-photo-36777543.jpeg',
@@ -36,8 +38,8 @@ const StorytellingSection = ({ title, description, imageUrl, direction }: {
   </section>
 );
 
-const FeaturedCategoryCard = ({ name, imageUrl }: { name: string; imageUrl: string; href: string }) => (
-  <Link href="/products" className="group block">
+const FeaturedCategoryCard = ({ name, imageUrl, href }: { name: string; imageUrl: string; href: string }) => (
+  <Link href={href} className="group block">
     <div className="relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-500 bg-white">
       <div className="aspect-[4/3] overflow-hidden">
         <img src={imageUrl} alt={name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -50,7 +52,14 @@ const FeaturedCategoryCard = ({ name, imageUrl }: { name: string; imageUrl: stri
   </Link>
 );
 
-export default function HomePage() {
+export default async function HomePage() {
+  const catResult = await getCategories();
+  const cats = new Map((catResult.success ? catResult.data || [] : []).map((c: any) => [c.slug, c.id]));
+
+  const catLink = (slug: string) => {
+    const id = cats.get(slug);
+    return id ? `/products?category=${id}` : '/products';
+  };
   return (
     <div className="overflow-hidden">
       {/* HERO — Split Layout: Left Text + Right Lifestyle Imagery */}
@@ -135,12 +144,12 @@ export default function HomePage() {
             <p className="text-lg text-muted-foreground max-w-xl mx-auto">Explore our curated selection of premium appliances for every room.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <FeaturedCategoryCard name="Refrigerators" imageUrl={IMG.fridge} href="/products/refrigerators" />
-            <FeaturedCategoryCard name="Washing Machines" imageUrl={IMG.washing} href="/products/washing-machines" />
-            <FeaturedCategoryCard name="Air Conditioners" imageUrl={IMG.ac} href="/products/air-conditioners" />
-            <FeaturedCategoryCard name="TVs &amp; Displays" imageUrl={IMG.tv} href="/products/tvs" />
-            <FeaturedCategoryCard name="Audio Systems" imageUrl={IMG.audio} href="/products/audio" />
-            <FeaturedCategoryCard name="Kitchen Appliances" imageUrl={IMG.kitchen} href="/products/kitchen" />
+            <FeaturedCategoryCard name="Refrigerators" imageUrl={IMG.fridge} href={catLink('refrigerators')} />
+            <FeaturedCategoryCard name="Washing Machines" imageUrl={IMG.washing} href={catLink('washer')} />
+            <FeaturedCategoryCard name="Air Conditioners" imageUrl={IMG.ac} href="/products" />
+            <FeaturedCategoryCard name="TVs &amp; Displays" imageUrl={IMG.tv} href="/products" />
+            <FeaturedCategoryCard name="Audio Systems" imageUrl={IMG.audio} href="/products" />
+            <FeaturedCategoryCard name="Kitchen Appliances" imageUrl={IMG.kitchen} href="/products" />
           </div>
         </div>
       </section>
@@ -266,16 +275,18 @@ export default function HomePage() {
         <div className="container mx-auto text-center max-w-2xl space-y-6">
           <h2 className="text-4xl font-bold text-white font-heading">Stay Inspired</h2>
           <p className="text-lg text-white/70">Subscribe to receive exclusive offers, new arrivals, and design inspiration.</p>
-          <div className="flex items-center gap-3 max-w-md mx-auto">
+          <form action={subscribeNewsletter as unknown as (fd: FormData) => void} className="flex items-center gap-3 max-w-md mx-auto">
             <input
+              name="email"
               type="email"
+              required
               placeholder="Enter your email"
               className="flex-1 px-5 py-3.5 rounded-full border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-brand-gold/50 focus:border-brand-gold transition-all backdrop-blur-sm"
             />
-            <Button className="rounded-full px-8 py-3.5 bg-brand-gold hover:bg-brand-gold-hover text-brand-navy font-semibold shrink-0 shadow-lg">
+            <Button type="submit" className="rounded-full px-8 py-3.5 bg-brand-gold hover:bg-brand-gold-hover text-brand-navy font-semibold shrink-0 shadow-lg">
               Subscribe
             </Button>
-          </div>
+          </form>
         </div>
       </section>
     </div>

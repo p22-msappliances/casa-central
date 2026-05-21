@@ -1,0 +1,21 @@
+{
+  "name": "repo-intelligence-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Production-grade Repository Intelligence MCP Plugin",
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "tsx watch src/server.js",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.22.0",
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

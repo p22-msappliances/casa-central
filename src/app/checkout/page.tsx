@@ -75,7 +75,6 @@ function CheckoutContent() {
 
       const orderId = orderResult.data.id;
 
-      // Mock payment recording
       const paymentResult = await recordPayment(orderId, {
         amount: grandTotal,
         method: 'Credit Card',

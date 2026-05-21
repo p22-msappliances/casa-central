@@ -5,14 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { MapPin, Phone, Mail, Clock, Send } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Send, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { submitContact } from '@/app/actions/misc';
 
 function ContactForm() {
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    const result = await submitContact(formData);
+    setLoading(false);
+    if (result.success) {
+      toast.success('Message sent! We will get back to you within 24 hours.');
+      e.currentTarget.reset();
+    } else {
+      toast.error(result.error || 'Failed to send message');
+    }
   };
 
   return (
@@ -60,40 +71,29 @@ function ContactForm() {
         </div>
 
         <div className="p-8 rounded-2xl bg-card border border-secondary/30">
-          {submitted ? (
-            <div className="text-center space-y-4 py-12">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                <Send className="h-8 w-8 text-primary" />
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" name="name" required />
               </div>
-              <h3 className="text-2xl font-bold text-primary">Message Sent!</h3>
-              <p className="text-muted-foreground">Thank you for reaching out. We'll get back to you within 24 hours.</p>
-              <Button variant="outline" className="rounded-full" onClick={() => setSubmitted(false)}>Send Another Message</Button>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" name="email" type="email" required />
+              </div>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" required />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" required />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="subject">Subject</Label>
-                <Input id="subject" required />
-              </div>
-              <div>
-                <Label htmlFor="message">Message</Label>
-                <Textarea id="message" rows={5} required className="resize-none" />
-              </div>
-              <Button type="submit" className="w-full rounded-full py-6 text-lg flex items-center gap-2">
-                <Send className="h-5 w-5" /> Send Message
-              </Button>
-            </form>
-          )}
+            <div>
+              <Label htmlFor="subject">Subject</Label>
+              <Input id="subject" name="subject" required />
+            </div>
+            <div>
+              <Label htmlFor="message">Message</Label>
+              <Textarea id="message" name="message" rows={5} required className="resize-none" />
+            </div>
+            <Button type="submit" className="w-full rounded-full py-6 text-lg flex items-center gap-2" disabled={loading}>
+              {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Sending...</> : <><Send className="h-5 w-5" /> Send Message</>}
+            </Button>
+          </form>
         </div>
       </div>
     </div>

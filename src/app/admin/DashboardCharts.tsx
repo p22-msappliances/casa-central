@@ -6,16 +6,7 @@ import {
   AreaChart, Area,
 } from 'recharts';
 
-const salesData = [
-  { month: 'Jan', sales: 120000, orders: 45 },
-  { month: 'Feb', sales: 150000, orders: 52 },
-  { month: 'Mar', sales: 180000, orders: 61 },
-  { month: 'Apr', sales: 220000, orders: 78 },
-  { month: 'May', sales: 190000, orders: 65 },
-  { month: 'Jun', sales: 250000, orders: 85 },
-];
-
-export function DashboardCharts({ productPerformance }: { productPerformance: any[] }) {
+export function DashboardCharts({ salesData, productPerformance }: { salesData: any[]; productPerformance: any[] }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="p-6 rounded-xl bg-card border border-secondary/30">

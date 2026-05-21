@@ -27,6 +27,62 @@ export async function getAdminStats() {
   };
 }
 
+export async function getDashboardCharts() {
+  const supabase = await createClient();
+
+  // 1. Monthly Sales
+  const { data: salesData, error: salesError } = await supabase
+    .from('orders')
+    .select('created_at, total_amount')
+    .order('created_at', { ascending: true });
+
+  // 2. Revenue by Category
+  const { data: categoryData, error: catError } = await supabase
+    .from('order_items')
+    .select('price_at_purchase, quantity, product_variants(products(category(name)))');
+
+  if (salesError || catError) {
+    return { success: false, error: salesError?.message || catError?.message };
+  }
+
+  // Process Monthly Sales
+  const monthlyMap: Record<string, { sales: number; orders: number }> = {};
+  salesData?.forEach(order => {
+    const month = new Date(order.created_at).toLocaleString('default', { month: 'short' });
+    if (!monthlyMap[month]) monthlyMap[month] = { sales: 0, orders: 0 };
+    monthlyMap[month].sales += Number(order.total_amount);
+    monthlyMap[month].orders += 1;
+  });
+
+  const formattedSales = Object.entries(monthlyMap).map(([month, data]) => ({
+    month,
+    sales: data.sales,
+    orders: data.orders,
+  }));
+
+  // Process Revenue by Category
+  const categoryMap: Record<string, number> = {};
+  categoryData?.forEach(item => {
+    const product = (item.product_variants as any)?.products;
+    const catName = product?.category?.name || 'Other';
+    const revenue = Number(item.price_at_purchase) * Number(item.quantity);
+    categoryMap[catName] = (categoryMap[catName] || 0) + revenue;
+  });
+
+  const formattedPerformance = Object.entries(categoryMap).map(([name, revenue]) => ({
+    name,
+    revenue,
+  })).sort((a, b) => b.revenue - a.revenue);
+
+  return {
+    success: true,
+    data: {
+      salesData: formattedSales,
+      productPerformance: formattedPerformance,
+    }
+  };
+}
+
 export async function getAdminOrders(limit = 50, cursor?: string) {
   const supabase = await createClient();
 

@@ -2,7 +2,7 @@
 "use server";
 
 import { createClient } from "@/lib/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { Database } from "@/types/database.types";
 
 type Inventory = Database["public"]["Tables"]["inventory"]["Row"];
@@ -151,7 +151,7 @@ export async function getAllInventory() {
 
   const { data, error } = await supabase
     .from("inventory")
-    .select("*, product_variants(sku, price, products(id, name, slug)), warehouses(*), vendors(name)")
+    .select("id, variant_id, warehouse_id, quantity, low_stock_threshold, updated_at, product_variants(sku, products(id, name, slug)), warehouses(id, name, is_virtual), vendors(name)")
     .order("updated_at", { ascending: false });
 
   if (error) return { success: false, error: error.message };
@@ -267,7 +267,7 @@ export async function getProductsForInventory() {
   return { success: true, data };
 }
 
-export async function getWarehouses() {
+export const getWarehouses = unstable_cache(async () => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("warehouses")
@@ -278,7 +278,7 @@ export async function getWarehouses() {
 
   if (error) return { success: false, error: error.message };
   return { success: true, data };
-}
+}, [], { revalidate: 3600, tags: ['warehouses'] });
 
 export async function createTransfer(data: {
   from_warehouse_id: string;
@@ -520,7 +520,7 @@ export async function updateTransferStatus(transferId: string, status: "PENDING"
 }
 
 // Vendors
-export async function getVendors() {
+export const getVendors = unstable_cache(async () => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("vendors")
@@ -529,7 +529,7 @@ export async function getVendors() {
 
   if (error) return { success: false, error: error.message };
   return { success: true, data };
-}
+}, [], { revalidate: 3600, tags: ['vendors'] });
 
 export async function createVendor(data: { name: string; contact_email?: string; contact_phone?: string; address?: string; notes?: string }) {
   const supabase = await createClient();

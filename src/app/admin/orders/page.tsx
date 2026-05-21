@@ -68,14 +68,16 @@ export default function AdminOrdersPage() {
     setOrderDetail(null);
     try {
       const result = await getAdminOrderById(id);
+      console.log('getAdminOrderById result:', JSON.stringify(result, null, 2));
       if (result.success) {
         setOrderDetail(result.data);
         setPaymentAmount(String(result.data?.total_amount || ''));
       } else {
-        toast.error('Failed to load order details');
+        toast.error(`Failed to load order details: ${result.error}`);
       }
-    } catch {
-      toast.error('An unexpected error occurred');
+    } catch (err) {
+      console.error('openOrderDetail error:', err);
+      toast.error(`An unexpected error occurred: ${err}`);
     } finally {
       setDetailLoading(false);
     }
@@ -219,7 +221,7 @@ export default function AdminOrdersPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Contact</p>
-                  <p className="text-sm text-muted-foreground">{orderDetail.profiles?.phone || 'N/A'}</p>
+                  <p className="text-sm text-muted-foreground">{orderDetail.profiles?.phone_number || 'N/A'}</p>
                 </div>
               </div>
 

@@ -78,7 +78,7 @@ export async function getAdminOrderById(id: string) {
         first_name,
         last_name,
         email,
-        phone
+        phone_number
       ),
       order_items (
         *,
@@ -94,7 +94,7 @@ export async function getAdminOrderById(id: string) {
         )
       ),
       payments (
-        *,
+        id,
         created_at,
         amount,
         method,

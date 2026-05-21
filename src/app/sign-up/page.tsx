@@ -1,5 +1,3 @@
-"use client";
-
 import { SignUpForm } from '@/components/auth/SignUpForm';
 
 export const dynamic = 'force-dynamic';

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 
 export const metadata = {
@@ -15,7 +15,9 @@ export default function AdminLayout({
 }) {
   return (
     <div className="flex min-h-screen">
-      <AdminSidebar />
+      <Suspense fallback={<div className="w-64 min-h-screen bg-card border-r border-secondary/30" />}>
+        <AdminSidebar />
+      </Suspense>
       <main className="flex-1 p-8 bg-background overflow-y-auto">
         {children}
       </main>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 
@@ -9,7 +9,9 @@ type LayoutProps = {
 export const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar />
+      <Suspense fallback={<div className="h-16 bg-background" />}>
+        <Navbar />
+      </Suspense>
       <main className="grow">
         {children}
       </main>

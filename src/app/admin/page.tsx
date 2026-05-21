@@ -1,22 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-"use client";
-
-import React, { useEffect, useState } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, AreaChart, Area,
-} from 'recharts';
-import { TrendingUp, Package, ShoppingCart, Users, DollarSign, AlertTriangle, Loader2 } from 'lucide-react';
-import { getAdminStats } from '@/app/actions/admin';
-
-const salesData = [
-  { month: 'Jan', sales: 120000, orders: 45 },
-  { month: 'Feb', sales: 150000, orders: 52 },
-  { month: 'Mar', sales: 180000, orders: 61 },
-  { month: 'Apr', sales: 220000, orders: 78 },
-  { month: 'May', sales: 190000, orders: 65 },
-  { month: 'Jun', sales: 250000, orders: 85 },
-];
+import { getAdminStats, getAdminOrders } from '@/app/actions/admin';
+import { DashboardCharts } from './DashboardCharts';
 
 const productPerformance = [
   { name: 'Refrigerators', revenue: 420000 },
@@ -26,69 +10,43 @@ const productPerformance = [
   { name: 'Air Conditioners', revenue: 85000 },
 ];
 
-const recentOrders = [
-  { id: 'CC-ABC123', customer: 'Maria Santos', total: 65000, status: 'Shipped' },
-  { id: 'CC-DEF456', customer: 'Jose Reyes', total: 25000, status: 'Pending' },
-  { id: 'CC-GHI789', customer: 'Anna Cruz', total: 95000, status: 'Delivered' },
-  { id: 'CC-JKL012', customer: 'Pedro Tan', total: 42000, status: 'Processing' },
-];
+export default async function AdminDashboardPage() {
+  const [statsResult, ordersResult] = await Promise.all([
+    getAdminStats(),
+    getAdminOrders(),
+  ]);
 
-export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const result = await getAdminStats();
-        if (result.success) {
-          setStats(result.data);
-        }
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchStats();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-full py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const stats = statsResult.success ? statsResult.data : null;
+  const recentOrders = ordersResult.success ? (ordersResult.data as any[]).slice(0, 4) : [];
 
   const statsConfig = [
-    { 
-      label: 'Total Revenue', 
-      value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats?.totalRevenue || 0), 
-      change: '+12.5%', 
-      icon: DollarSign, 
-      color: 'text-green-500' 
+    {
+      label: 'Total Revenue',
+      value: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(stats?.totalRevenue || 0),
+      change: '+12.5%',
+      icon: 'DollarSign',
+      color: 'text-green-500'
     },
-    { 
-      label: 'Orders', 
-      value: stats?.orderCount || 0, 
-      change: '+8.2%', 
-      icon: ShoppingCart, 
-      color: 'text-blue-500' 
+    {
+      label: 'Orders',
+      value: stats?.orderCount || 0,
+      change: '+8.2%',
+      icon: 'ShoppingCart',
+      color: 'text-blue-500'
     },
-    { 
-      label: 'Products', 
-      value: stats?.productCount || 0, 
-      change: '+3.1%', 
-      icon: Package, 
-      color: 'text-purple-500' 
+    {
+      label: 'Products',
+      value: stats?.productCount || 0,
+      change: '+3.1%',
+      icon: 'Package',
+      color: 'text-purple-500'
     },
-    { 
-      label: 'Customers', 
-      value: stats?.customerCount || 0, 
-      change: '+15.3%', 
-      icon: Users, 
-      color: 'text-orange-500' 
+    {
+      label: 'Customers',
+      value: stats?.customerCount || 0,
+      change: '+15.3%',
+      icon: 'Users',
+      color: 'text-orange-500'
     },
   ];
 
@@ -101,12 +59,12 @@ export default function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsConfig.map((stat) => {
-          const Icon = stat.icon;
+          const IconName = stat.icon;
           return (
             <div key={stat.label} className="p-4 rounded-xl bg-card border border-secondary/30 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{stat.label}</span>
-                <Icon className={`h-5 w-5 ${stat.color}`} />
+                <span className={`text-sm font-semibold ${stat.color}`}>{stat.value}</span>
               </div>
               <p className="text-2xl font-bold text-primary">{stat.value}</p>
               <span className={`text-xs font-semibold ${stat.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
@@ -117,39 +75,7 @@ export default function AdminDashboardPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="p-6 rounded-xl bg-card border border-secondary/30">
-          <h3 className="text-lg font-bold text-primary font-heading mb-4">Sales Overview</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={salesData}>
-              <defs>
-                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#C9A84C" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#C9A84C" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0.01 240 / 15%)" />
-              <XAxis dataKey="month" stroke="oklch(0.556 0.03 240)" />
-              <YAxis stroke="oklch(0.556 0.03 240)" />
-              <Tooltip contentStyle={{ background: 'oklch(0.18 0.02 245)', border: '1px solid oklch(0.25 0.01 240 / 15%)', borderRadius: '12px' }} />
-              <Area type="monotone" dataKey="sales" stroke="#C9A84C" fill="url(#colorSales)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="p-6 rounded-xl bg-card border border-secondary/30">
-          <h3 className="text-lg font-bold text-primary font-heading mb-4">Revenue by Category</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={productPerformance}>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0.01 240 / 15%)" />
-              <XAxis dataKey="name" stroke="oklch(0.556 0.03 240)" />
-              <YAxis stroke="oklch(0.556 0.03 240)" />
-              <Tooltip contentStyle={{ background: 'oklch(0.18 0.02 245)', border: '1px solid oklch(0.25 0.01 240 / 15%)', borderRadius: '12px' }} />
-              <Bar dataKey="revenue" fill="#C9A84C" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <DashboardCharts productPerformance={productPerformance} />
 
       <div className="p-6 rounded-xl bg-card border border-secondary/30">
         <h3 className="text-lg font-bold text-primary font-heading mb-4">Recent Orders</h3>
@@ -164,7 +90,7 @@ export default function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map((order) => (
+              {recentOrders.map((order: any) => (
                 <tr key={order.id} className="border-b border-secondary/10 hover:bg-secondary/10 transition-colors">
                   <td className="p-4 font-medium text-primary">
                     #{order.id.slice(0, 8).toUpperCase()}
@@ -181,6 +107,11 @@ export default function AdminDashboardPage() {
                   </td>
                 </tr>
               ))}
+              {recentOrders.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-muted-foreground">No orders yet.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -188,4 +119,3 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
-

@@ -16,11 +16,39 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'images.pexels.com',
+      },
+      {
+        protocol: 'https',
         hostname: 'geappliancesdistributor.ph',
       },
       {
         protocol: 'https',
         hostname: 'www.lg.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.mos.cms.futurecdn.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'upscaleaudio.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.pico-sa.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.mechcool.co.uk',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.brittany.com.ph',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.squarespace-cdn.com',
       },
     ],
   },

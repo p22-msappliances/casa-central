@@ -1,7 +1,6 @@
-"use client";
-
-import React, { Suspense } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, HeadphonesIcon, Wrench, Award } from 'lucide-react';
 
@@ -12,7 +11,7 @@ const values = [
   { icon: Wrench, title: 'Professional Installation', desc: 'Certified technicians handle delivery and installation with care.' },
 ];
 
-function AboutContent() {
+export default function AboutPage() {
   return (
     <div className="container mx-auto px-4 py-16 space-y-24">
       <section className="text-center space-y-6 max-w-4xl mx-auto">
@@ -30,11 +29,12 @@ function AboutContent() {
             Founded with a vision to elevate the modern Filipino home, CASA CENTRAL started as a passion for beautiful technology.
           </p>
         </div>
-        <div className="rounded-2xl overflow-hidden shadow-lg border border-border/40">
-          <img
+        <div className="rounded-2xl overflow-hidden shadow-lg border border-border/40 relative aspect-[4/3]">
+          <Image
             src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"
             alt="Luxury kitchen with premium appliances"
-            className="w-full aspect-[4/3] object-cover"
+            fill
+            className="object-cover"
           />
         </div>
       </section>
@@ -63,13 +63,5 @@ function AboutContent() {
         </Link>
       </section>
     </div>
-  );
-}
-
-export default function AboutPage() {
-  return (
-    <Suspense fallback={<div className="text-center py-24 text-muted-foreground">Loading...</div>}>
-      <AboutContent />
-    </Suspense>
   );
 }

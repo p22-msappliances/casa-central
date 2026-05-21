@@ -1,5 +1,3 @@
-"use client";
-
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -21,9 +19,11 @@ export default function NotFound() {
             <Home className="h-5 w-5" /> Go Home
           </Button>
         </Link>
-        <Button variant="outline" className="rounded-full px-8 py-6 flex items-center gap-2" onClick={() => window.history.back()}>
-          <ArrowLeft className="h-5 w-5" /> Go Back
-        </Button>
+        <Link href="/products">
+          <Button variant="outline" className="rounded-full px-8 py-6 flex items-center gap-2">
+            <ArrowLeft className="h-5 w-5" /> Browse Products
+          </Button>
+        </Link>
       </div>
     </div>
   );

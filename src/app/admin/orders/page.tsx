@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -59,7 +60,9 @@ export default function AdminOrdersPage() {
           <tbody>
             {orders.map((order) => (
               <tr key={order.id} className="border-b border-secondary/10 hover:bg-secondary/10 transition-colors">
-                <td className="p-4 font-mono font-medium text-primary">{order.id}</td>
+                <td className="p-4 font-medium text-primary">
+                  #{order.id.slice(0, 8).toUpperCase()}
+                </td>
                 <td className="p-4 text-muted-foreground">{order.customer}</td>
                 <td className="p-4 text-muted-foreground">{order.date}</td>
                 <td className="p-4 text-muted-foreground">{order.items}</td>

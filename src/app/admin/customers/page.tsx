@@ -35,7 +35,7 @@ export default async function AdminCustomersPage() {
                     <div className="font-medium text-primary">
                       {p.first_name && p.last_name ? `${p.first_name} ${p.last_name}` : p.first_name || p.last_name || p.email}
                     </div>
-                    <div className="text-xs text-muted-foreground font-mono">{p.id}</div>
+                    <div className="text-xs text-muted-foreground">{p.email}</div>
                   </td>
                   <td className="p-4">
                     <Badge variant={p.role === 'ADMIN' || p.role === 'SUPER_ADMIN' ? 'destructive' : p.role === 'INVENTORY_MANAGER' ? 'default' : 'secondary'}>

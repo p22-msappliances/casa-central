@@ -1,5 +1,5 @@
 import { UserRepository } from '@/repositories/user.repository'
-import { CreateUserDto, UpdateUserDto } from '@/types/user'
+import { UpdateUserDto } from '@/types/user'
 import { Database } from '@/types/database.types'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']

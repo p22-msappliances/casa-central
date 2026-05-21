@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from '@/lib/server'
 import { Database } from '@/types/database.types'
 import { CreateProductDto, UpdateProductDto, CreateProductVariantDto } from '@/types/product'

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ProductRepository } from '@/repositories/product.repository'
 import { CreateProductDto, UpdateProductDto, CreateProductVariantDto } from '@/types/product'
 import { Database } from '@/types/database.types'

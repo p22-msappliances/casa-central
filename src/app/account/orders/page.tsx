@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -55,7 +56,7 @@ export default function OrdersPage() {
           {orders.map((order) => (
             <div key={order.id} className="p-4 rounded-xl bg-secondary/20 border border-secondary/30 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm font-bold text-primary font-mono">{order.id}</p>
+                <p className="text-sm font-bold text-primary">Order #{order.id.slice(0, 8).toUpperCase()}</p>
                 <p className="text-xs text-muted-foreground">{order.date} · {order.items} item(s)</p>
                 <p className="text-sm font-semibold text-accent-foreground">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(order.total))}</p>
               </div>

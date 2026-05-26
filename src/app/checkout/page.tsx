@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { CreditCard, Truck, CheckCircle, Loader2 } from 'lucide-react';
+import { CreditCard, Truck, CheckCircle, Loader2, User } from 'lucide-react';
 import { createOrder, recordPayment } from '@/app/actions/orders';
+import { createClient } from '@/lib/client';
 import { toast } from 'sonner';
 
 type Step = 'shipping' | 'payment' | 'review';
@@ -18,6 +19,7 @@ type Step = 'shipping' | 'payment' | 'review';
 function CheckoutContent() {
   const { items, clearCart } = useCartStore();
   const router = useRouter();
+  const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'guest' | 'none'>('loading');
   const [step, setStep] = useState<Step>('shipping');
   const [isProcessing, setIsProcessing] = useState(false);
   const [shippingInfo, setShippingInfo] = useState({
@@ -36,6 +38,30 @@ function CheckoutContent() {
     expiry: '',
     cvv: '',
   });
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then((result: { data: { user: import('@supabase/supabase-js').User | null } }) => {
+      if (result.data.user) {
+        setAuthState('authenticated');
+      } else {
+        setAuthState('none');
+      }
+    });
+  }, []);
+
+  const handleGuestCheckout = async () => {
+    setAuthState('loading');
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      toast.error('Unable to start guest checkout. Please sign in instead.');
+      setAuthState('none');
+      return;
+    }
+    setAuthState('guest');
+    toast.success('Continuing as guest. You can create an account after checkout.');
+  };
 
   const subtotal: number = getTotalPrice(items);
   const shippingTotal: number = 0;
@@ -114,6 +140,33 @@ function CheckoutContent() {
         <Link href="/products">
           <Button className="rounded-full px-8 py-6 text-lg">Continue Shopping</Button>
         </Link>
+      </div>
+    );
+  }
+
+  if (authState === 'loading') {
+    return (
+      <div className="container mx-auto px-4 py-24 text-center space-y-6">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
+        <p className="text-muted-foreground">Preparing checkout...</p>
+      </div>
+    );
+  }
+
+  if (authState === 'none') {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center space-y-8 max-w-lg">
+        <User className="h-16 w-16 text-primary/50 mx-auto" />
+        <h1 className="text-3xl font-bold text-primary font-heading">Checkout</h1>
+        <p className="text-muted-foreground">Sign in to your account or continue as a guest.</p>
+        <div className="flex flex-col gap-4">
+          <Link href="/sign-in?redirect=/checkout" className="w-full">
+            <Button className="w-full rounded-full py-6 text-lg">Sign In</Button>
+          </Link>
+          <Button variant="outline" className="w-full rounded-full py-6 text-lg" onClick={handleGuestCheckout}>
+            Continue as Guest
+          </Button>
+        </div>
       </div>
     );
   }

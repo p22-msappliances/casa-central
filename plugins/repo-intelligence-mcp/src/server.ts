@@ -34,9 +34,12 @@ const server = new Server(
 );
 
 // Scan for intelligence files on startup
-scanner.scan().then(() => {
-    console.error("Repository intelligence indexed.");
-});
+await scanner.scan();
+console.error("Repository intelligence indexed.");
+
+// Tool and Prompt handlers
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [] }));
+server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
 
 // Resource handlers
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
@@ -63,8 +66,6 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         }]
     };
 });
-
-// ... rest of server implementation ...
 
 async function main() {
   const transport = new StdioServerTransport();

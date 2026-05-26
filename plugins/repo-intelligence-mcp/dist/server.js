@@ -1,6 +1,6 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ListResourcesRequestSchema, ReadResourceRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
+import { ListResourcesRequestSchema, ReadResourceRequestSchema, ListToolsRequestSchema, ListPromptsRequestSchema, } from "@modelcontextprotocol/sdk/types.js";
 import { RepositoryScanner } from "./indexing/repositoryScanner.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,9 +20,11 @@ const server = new Server({
     },
 });
 // Scan for intelligence files on startup
-scanner.scan().then(() => {
-    console.error("Repository intelligence indexed.");
-});
+await scanner.scan();
+console.error("Repository intelligence indexed.");
+// Tool and Prompt handlers
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [] }));
+server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
 // Resource handlers
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
     const docs = scanner.getAllDocs();
@@ -48,7 +50,6 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
             }]
     };
 });
-// ... rest of server implementation ...
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);

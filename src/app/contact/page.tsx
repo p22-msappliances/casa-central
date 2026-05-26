@@ -22,7 +22,14 @@ function ContactForm() {
       toast.success('Message sent! We will get back to you within 24 hours.');
       e.currentTarget.reset();
     } else {
-      toast.error(result.error || 'Failed to send message');
+      if (typeof result.error === 'string') {
+        toast.error(result.error);
+      } else if (result.error && typeof result.error === 'object') {
+        const errorMessages = Object.values(result.error as Record<string, string[]>).flat().join(', ');
+        toast.error(errorMessages || 'Failed to send message');
+      } else {
+        toast.error('Failed to send message');
+      }
     }
   };
 

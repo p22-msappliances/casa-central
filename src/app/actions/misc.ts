@@ -3,17 +3,22 @@
 import { createClient } from '@/lib/server';
 import { Database } from '@/types/database.types';
 import { revalidatePath } from 'next/cache';
+import { contactSchema } from '@/lib/schemas';
 
 // Submit Contact Form
 export async function submitContact(formData: FormData) {
-  const name = formData.get('name') as string;
-  const email = formData.get('email') as string;
-  const subject = formData.get('subject') as string;
-  const message = formData.get('message') as string;
+  const validatedFields = contactSchema.safeParse({
+    name: formData.get('name'),
+    email: formData.get('email'),
+    subject: formData.get('subject'),
+    message: formData.get('message'),
+  });
 
-  if (!name || !email || !subject || !message) {
-    return { success: false, error: 'All fields are required' };
+  if (!validatedFields.success) {
+    return { success: false, error: validatedFields.error.flatten().fieldErrors as Record<string, string[]> };
   }
+
+  const { name, email, subject, message } = validatedFields.data;
 
   const supabase = await createClient();
   const { error } = await supabase.from('analytics_events').insert({

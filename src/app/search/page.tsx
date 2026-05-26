@@ -19,11 +19,7 @@ export default function SearchPage() {
   const [searched, setSearched] = useState(false);
 
   useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      setSearched(false);
-      return;
-    }
+    if (!query.trim()) return;
     const timer = setTimeout(async () => {
       setLoading(true);
       const result = await searchProducts(query, 20);
@@ -34,6 +30,15 @@ export default function SearchPage() {
     return () => clearTimeout(timer);
   }, [query]);
 
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+    if (!value.trim()) {
+      setResults([]);
+      setSearched(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-16 space-y-8">
       <div className="text-center space-y-4 max-w-2xl mx-auto">
@@ -42,7 +47,7 @@ export default function SearchPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleQueryChange}
             placeholder="Search for appliances, audio, and more..."
             className="pl-12 pr-12 py-6 text-lg rounded-full border-secondary"
             autoFocus

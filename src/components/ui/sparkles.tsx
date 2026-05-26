@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 
 interface SparkleParticle {
   id: number;
@@ -32,16 +31,10 @@ export const SparklesCore = ({
   minSize = 2,
   maxSize = 5,
 }: SparklesCoreProps) => {
-  const [particles, setParticles] = useState<SparkleParticle[]>([]);
-
-  useEffect(() => {
-    const container = document.getElementById('tsparticlesfullpage');
-    if (!container) return;
-
-    const w = container.offsetWidth;
-    const h = container.offsetHeight;
-
-    const newParticles: SparkleParticle[] = Array.from({ length: particleCount }).map((_, i) => ({
+  const generateParticles = (): SparkleParticle[] => {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 800;
+    const h = typeof window !== 'undefined' ? window.innerHeight : 600;
+    return Array.from({ length: particleCount }).map((_, i) => ({
       id: i,
       x: Math.random() * w,
       y: Math.random() * h,
@@ -49,9 +42,9 @@ export const SparklesCore = ({
       size: Math.random() * (maxSize - minSize) + minSize,
       delay: Math.random() * 2,
     }));
+  };
 
-    setParticles(newParticles);
-  }, [particleCount, colors, minSize, maxSize]);
+  const [particles] = useState<SparkleParticle[]>(generateParticles);
 
   return (
     <div

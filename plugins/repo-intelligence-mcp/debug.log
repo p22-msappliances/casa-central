@@ -1,0 +1,4 @@
+Starting MCP server... 
+Repository intelligence indexed.
+Repository Intelligence MCP Server running on stdio
+{"result":{"protocolVersion":"2025-11-25","capabilities":{"resources":{},"tools":{},"prompts":{}},"serverInfo":{"name":"repo-intelligence-mcp","version":"1.0.0"}},"jsonrpc":"2.0","id":0}

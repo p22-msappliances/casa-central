@@ -15,7 +15,7 @@ export default function CheckEmailPage() {
           <MailCheck className="h-8 w-8 text-brand-gold" />
         </div>
         <p className="text-center text-muted-foreground">
-          If you don't see the email, please check your spam folder.
+          If you don&apos;t see the email, please check your spam folder.
         </p>
         <Link href="/sign-in" className="w-full">
           <Button variant="outline" className="w-full rounded-full">

@@ -38,7 +38,7 @@ function ContactForm() {
       <section className="text-center space-y-4">
         <h1 className="text-5xl font-bold text-primary font-heading">Get in Touch</h1>
         <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-          Have questions? We'd love to hear from you.
+          Have questions? We&apos;d love to hear from you.
         </p>
       </section>
 

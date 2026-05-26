@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   authors: [
     {
       name: "CASA CENTRAL",
-      url: "https://casacentral.com", // Placeholder URL
+      url: "https://casacentralstore.vercel.app", // Placeholder URL
     },
   ],
   openGraph: {
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     description: "Transforming modern homes through smart appliances and beautiful technology.",
     type: "website",
     locale: "en_PH",
-    url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000" || "https://casacentralstore.vercel.app",
     images: [
       {
         url: "/logo.png",

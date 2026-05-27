@@ -2,6 +2,7 @@
 "use server";
 
 import { createClient } from "@/lib/server";
+import { formatPhone } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { Database } from "@/types/database.types";
 
@@ -48,9 +49,14 @@ export async function updateUserProfile(updates: Database["public"]["Tables"]["p
 
   if (!user) return { success: false, error: "Not authenticated" };
 
+  const formatted = {
+    ...updates,
+    phone_number: updates.phone_number ? formatPhone(updates.phone_number) : updates.phone_number,
+  };
+
   const { data, error } = await supabase
     .from("profiles")
-    .update(updates)
+    .update(formatted)
     .eq("id", user.id)
     .select()
     .single();

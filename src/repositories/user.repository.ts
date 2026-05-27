@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/server'
+import { formatPhone } from '@/lib/utils'
 import { Database } from '@/types/database.types'
 import { CreateUserDto, UpdateUserDto } from '@/types/user'
 
@@ -14,7 +15,7 @@ export class UserRepository {
         email: data.email,
         first_name: data.firstName,
         last_name: data.lastName,
-        phone_number: data.phoneNumber,
+        phone_number: data.phoneNumber ? formatPhone(data.phoneNumber) : data.phoneNumber,
         address: data.address,
         role: data.role || 'CUSTOMER'
       })
@@ -56,7 +57,7 @@ export class UserRepository {
       .update({
         first_name: data.firstName,
         last_name: data.lastName,
-        phone_number: data.phoneNumber,
+        phone_number: data.phoneNumber ? formatPhone(data.phoneNumber) : data.phoneNumber,
         address: data.address,
         role: data.role
       })

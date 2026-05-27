@@ -1,15 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Star, ShoppingCart, Heart } from 'lucide-react';
 import { Database } from '@/types/database.types';
 import { useCartStore } from '@/store/useCartStore';
+import { toggleWishlist } from '@/app/actions/wishlist';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 type ProductRow = Database['public']['Tables']['products']['Row'];
+type ProductVariantRow = Database['public']['Tables']['product_variants']['Row'];
 
 interface ProductCardProps {
   product: ProductRow & {
@@ -19,11 +21,11 @@ interface ProductCardProps {
     total_stock?: number;
     is_in_stock?: boolean;
   };
+  initialIsWishlisted?: boolean;
 }
 
-type ProductVariantRow = Database['public']['Tables']['product_variants']['Row'];
-
-export const ProductCard = ({ product }: ProductCardProps) => {
+export const ProductCard = ({ product, initialIsWishlisted = false }: ProductCardProps) => {
+  const [isWishlisted, setIsWishlisted] = useState(initialIsWishlisted);
   const productSlug = product.slug || product.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const averageRating = 4.5;
   const addItem = useCartStore(state => state.addItem);
@@ -38,6 +40,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       return;
     }
 
+    const cartItem = useCartStore.getState().items.find(i => i.variantId === variant.id);
+    const totalStock = product.total_stock || 0;
+
+    if (cartItem && totalStock > 0 && cartItem.quantity >= totalStock) {
+      toast.error(`Only ${totalStock} available — already in cart`);
+      return;
+    }
+
     addItem({
       variantId: variant.id,
       productId: product.id,
@@ -45,10 +55,28 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       price: variant.price,
       quantity: 1,
       imageUrl: variant.image_url || product.image_url || undefined,
-      maxQuantity: product.total_stock || 0,
+      maxQuantity: totalStock,
     });
 
     toast.success(`${product.name} added to cart`);
+  };
+
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const previousWishlisted = isWishlisted;
+    setIsWishlisted(!isWishlisted);
+
+    const result = await toggleWishlist(product.id);
+
+    if (!result.success) {
+      toast.error(result.error || 'Failed to update wishlist');
+      setIsWishlisted(previousWishlisted);
+      return;
+    }
+
+    toast.success('Wishlist updated');
   };
 
   const isInStock = (product.total_stock || 0) > 0;
@@ -111,8 +139,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <button
             className="absolute top-4 right-4 p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition-colors shadow-sm"
             aria-label="Add to wishlist"
+            onClick={handleToggleWishlist}
           >
-            <Heart className="h-4 w-4 text-muted-foreground hover:text-accent transition-colors" />
+            <Heart className={cn("h-4 w-4 transition-colors", isWishlisted ? "fill-accent text-accent" : "text-muted-foreground hover:text-accent")} />
           </button>
         </div>
       </Link>

@@ -18,37 +18,45 @@ interface ProductDetailClientProps {
 
 export default function ProductDetailClient({ product, initialReviews }: ProductDetailClientProps) {
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState(product.product_variants?.[0]);
   const [reviews, setReviews] = useState(initialReviews);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const addItem = useCartStore(state => state.addItem);
-  const totalStock = product.total_stock || 0;
+
+  const totalStock = selectedVariant?.inventory?.reduce((s: number, inv: any) => s + (inv.quantity || 0), 0) || 0;
   const isInStock = totalStock > 0;
 
   const handleAddToCart = () => {
-    const variant = product.product_variants?.[0];
-    if (!variant || !isInStock) {
+    if (!selectedVariant || !isInStock) {
       toast.error('This product is currently out of stock');
       return;
     }
 
-    if (quantity > totalStock) {
-      toast.error(`Only ${totalStock} available`);
+    const cartItem = useCartStore.getState().items.find(i => i.variantId === selectedVariant.id);
+    const inCartQty = cartItem?.quantity || 0;
+    const remaining = totalStock - inCartQty;
+
+    if (remaining <= 0) {
+      toast.error(`Only ${totalStock} available — already in cart`);
       return;
     }
 
+    const effectiveQty = Math.min(quantity, remaining);
+
     addItem({
-      variantId: variant.id,
+      variantId: selectedVariant.id,
       productId: product.id,
-      name: product.name,
-      price: variant.price,
-      quantity,
-      imageUrl: variant.image_url || product.image_url,
+      name: `${product.name} - ${selectedVariant.sku}`,
+      price: selectedVariant.price,
+      quantity: effectiveQty,
+      imageUrl: selectedVariant.image_url || product.image_url,
       maxQuantity: totalStock,
     });
 
-    toast.success(`${product.name} added to cart`);
+    const addedQty = effectiveQty;
+    toast.success(addedQty < quantity ? `Added ${addedQty} of ${quantity} (only ${remaining} remaining)` : `${product.name} (${selectedVariant.sku}) added to cart`);
   };
 
   const handleIncrement = () => setQuantity(prev => Math.min(prev + 1, totalStock));
@@ -104,33 +112,51 @@ export default function ProductDetailClient({ product, initialReviews }: Product
             <h1 className="text-4xl md:text-5xl font-bold text-primary font-heading leading-tight">
               {product.name}
             </h1>
-            <p className="text-2xl font-semibold text-accent-foreground">
-              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(product.base_price || 0))}
-            </p>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              {product.description}
-            </p>
-          </div>
+             <p className="text-2xl font-semibold text-accent-foreground">
+               {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(selectedVariant?.price || product.base_price || 0))}
+             </p>
+             <p className="text-lg text-muted-foreground leading-relaxed">
+               {product.description}
+             </p>
+           </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-border/60 shadow-sm space-y-6">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">Quantity</span>
-              <div className="flex items-center gap-4">
-                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border/60" onClick={handleDecrement}>
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="text-lg font-bold text-primary">{quantity}</span>
-                <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border/60" onClick={handleIncrement} disabled={quantity >= totalStock}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground text-center">{totalStock} available in stock</p>
+           <div className="p-6 rounded-2xl bg-white border border-border/60 shadow-sm space-y-6">
+             {product.product_variants && product.product_variants.length > 1 && (
+               <div>
+                 <label className="text-sm font-medium text-muted-foreground mb-2 block">Variant</label>
+                 <select
+                   className="w-full p-2 border border-input rounded-md"
+                   value={selectedVariant?.id}
+                   onChange={(e) => {
+                     const variant = product.product_variants.find((v: any) => v.id === e.target.value);
+                     setSelectedVariant(variant);
+                     setQuantity(1);
+                   }}
+                 >
+                   {product.product_variants.map((v: any) => (
+                     <option key={v.id} value={v.id}>{v.sku}</option>
+                   ))}
+                 </select>
+               </div>
+             )}
+             <div className="flex items-center justify-between">
+               <span className="text-sm font-medium text-muted-foreground">Quantity</span>
+               <div className="flex items-center gap-4">
+                 <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border/60" onClick={handleDecrement}>
+                   <Minus className="h-4 w-4" />
+                 </Button>
+                 <span className="text-lg font-bold text-primary">{quantity}</span>
+                 <Button variant="outline" size="icon" className="h-8 w-8 rounded-full border-border/60" onClick={handleIncrement} disabled={quantity >= totalStock}>
+                   <Plus className="h-4 w-4" />
+                 </Button>
+               </div>
+             </div>
+             <p className="text-xs text-muted-foreground text-center">{totalStock} available in stock</p>
 
-            <Button size="lg" className="w-full py-6 text-xl rounded-full shadow-lg transition-all duration-300 flex items-center justify-center gap-2" onClick={handleAddToCart} disabled={!isInStock}>
-              <ShoppingCart className="h-6 w-6" /> {isInStock ? 'Add to Cart' : 'Out of Stock'}
-            </Button>
-          </div>
+             <Button size="lg" className="w-full py-6 text-xl rounded-full shadow-lg transition-all duration-300 flex items-center justify-center gap-2" onClick={handleAddToCart} disabled={!isInStock}>
+               <ShoppingCart className="h-6 w-6" /> {isInStock ? 'Add to Cart' : 'Out of Stock'}
+             </Button>
+           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex flex-col items-center text-center p-4 rounded-xl bg-muted/30 border border-border/40">

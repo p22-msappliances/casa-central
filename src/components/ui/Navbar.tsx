@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { CartDrawer } from '@/components/ui/CartDrawer';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { User, Search, LogOut, LayoutDashboard } from 'lucide-react';
+import { Menu, User, Search, LogOut, LayoutDashboard, X } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/client';
@@ -19,6 +19,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetClose,
+} from "@/components/ui/sheet";
 
 export const Navbar = () => {
   const pathname = usePathname();
@@ -27,6 +32,7 @@ export const Navbar = () => {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = React.useMemo(() => createClient(), []);
+  const initialFetchDone = useRef(false);
 
   useEffect(() => {
     const getUserAndRole = async () => {
@@ -49,6 +55,7 @@ export const Navbar = () => {
         console.error('Error fetching user/role:', err);
       } finally {
         setLoading(false);
+        initialFetchDone.current = true;
       }
     };
 
@@ -56,6 +63,8 @@ export const Navbar = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: any, session: any) => {
+        if (!initialFetchDone.current) return;
+
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         
@@ -84,25 +93,115 @@ export const Navbar = () => {
     { href: '/about', label: 'About' },
   ];
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const handleSignOut = async () => {
+    const prevUser = user;
+    const prevRole = role;
     setUser(null);
     setRole(null);
-    await signOut();
-    router.push('/');
-    router.refresh();
+    try {
+      await signOut();
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      console.error('Sign out failed:', err);
+      setUser(prevUser);
+      setRole(prevRole);
+    }
   };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-brand-soft-gray/60 bg-white">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
-        <Link href="/" className="flex items-center">
-          <img
-            src="/logo.png"
-            alt="CASA CENTRAL"
-            className="h-9 w-auto"
-            style={{ objectFit: 'contain' }}
-          />
-        </Link>
+        <div className="flex items-center gap-2">
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetContent side="left" className="w-72 sm:max-w-xs" showCloseButton={false}>
+              <div className="flex items-center justify-between p-4 border-b border-brand-soft-gray/60">
+                <img src="/logo.png" alt="CASA CENTRAL" className="h-7 w-auto" />
+                <SheetClose><Button variant="ghost" size="icon-sm"><X className="h-4 w-4" /></Button></SheetClose>
+              </div>
+              <div className="flex flex-col p-4 space-y-1">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      pathname === link.href
+                        ? "bg-brand-gold/10 text-brand-gold"
+                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+              <div className="border-t border-brand-soft-gray/60 p-4 space-y-1 mt-auto">
+                {loading ? null : user ? (
+                  <>
+                    <Link
+                      href="/account/profile"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-colors"
+                    >
+                      <User className="h-4 w-4" /> Profile
+                    </Link>
+                    <Link
+                      href="/account/orders"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-colors"
+                    >
+                      <LayoutDashboard className="h-4 w-4" /> My Orders
+                    </Link>
+                    {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-brand-gold font-semibold hover:bg-brand-gold/10 transition-colors"
+                      >
+                        <LayoutDashboard className="h-4 w-4" /> Admin Dashboard
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => { handleSignOut(); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" /> Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/sign-in"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-colors"
+                  >
+                    <User className="h-4 w-4" /> Sign In
+                  </Link>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden rounded-full hover:bg-brand-gold/10"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <Menu className="h-5 w-5 text-muted-foreground" />
+          </Button>
+
+          <Link href="/" className="flex items-center">
+            <img
+              src="/logo.png"
+              alt="CASA CENTRAL"
+              className="h-9 w-auto"
+              style={{ objectFit: 'contain' }}
+            />
+          </Link>
+        </div>
 
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
@@ -129,12 +228,12 @@ export const Navbar = () => {
           </Link>
           <CartDrawer />
           
-          {!loading && user ? (
+          {loading ? (
+            <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+          ) : user ? (
             <DropdownMenu>
-              <DropdownMenuTrigger>
-                <button type="button" className={cn(buttonVariants({ variant: 'ghost', size: 'icon', className: 'rounded-full hover:bg-brand-gold/10' }))}>
-                  <User className="h-5 w-5 text-brand-gold" />
-                </button>
+              <DropdownMenuTrigger className={cn(buttonVariants({ variant: 'ghost', size: 'icon', className: 'rounded-full hover:bg-brand-gold/10' }))}>
+                <User className="h-5 w-5 text-brand-gold" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuGroup>

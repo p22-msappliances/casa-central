@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'media.us.lg.com',
+      },
+      {
+        protocol: 'https',
         hostname: 'cdn.mos.cms.futurecdn.net',
       },
       {

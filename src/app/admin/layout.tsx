@@ -18,7 +18,7 @@ export default function AdminLayout({
       <Suspense fallback={<div className="w-64 min-h-screen bg-card border-r border-secondary/30" />}>
         <AdminSidebar />
       </Suspense>
-      <main className="flex-1 p-8 bg-background overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 pt-[3.5rem] md:pt-8 bg-background overflow-y-auto">
         {children}
       </main>
     </div>

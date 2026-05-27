@@ -61,8 +61,15 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="p-5 rounded-xl bg-card border border-secondary/30 space-y-3">
-          <h3 className="font-bold text-primary flex items-center gap-2"><MapPin className="h-4 w-4" /> Shipping Address</h3>
-          <p className="text-sm text-muted-foreground">{order.shipping_address}</p>
+          <h3 className="font-bold text-primary flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            {order.delivery_type === 'pickup' ? 'Pick Up' : 'Shipping Address'}
+          </h3>
+          {order.delivery_type === 'pickup' ? (
+            <p className="text-sm text-muted-foreground">Customer will pick up at store</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">{order.shipping_address}</p>
+          )}
         </div>
         <div className="p-5 rounded-xl bg-card border border-secondary/30 space-y-3">
           <h3 className="font-bold text-primary flex items-center gap-2"><CreditCard className="h-4 w-4" /> Payment</h3>

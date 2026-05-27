@@ -2,6 +2,7 @@
 "use server";
 
 import { createClient, createAnonClient } from "@/lib/server";
+import { formatPhone } from "@/lib/utils";
 import { revalidatePath, unstable_cache } from "next/cache";
 import { Database } from "@/types/database.types";
 
@@ -543,7 +544,7 @@ export async function createVendor(data: { name: string; contact_email?: string;
       id: crypto.randomUUID(),
       name: data.name,
       contact_email: data.contact_email || null,
-      contact_phone: data.contact_phone || null,
+      contact_phone: data.contact_phone ? formatPhone(data.contact_phone) : null,
       address: data.address || null,
       notes: data.notes || null,
     }])
@@ -557,9 +558,13 @@ export async function createVendor(data: { name: string; contact_email?: string;
 
 export async function updateVendor(id: string, data: { name?: string; contact_email?: string; contact_phone?: string; address?: string; notes?: string; is_active?: boolean }) {
   const supabase = await createClient();
+  const formatted = {
+    ...data,
+    contact_phone: data.contact_phone ? formatPhone(data.contact_phone) : data.contact_phone,
+  };
   const { data: result, error } = await supabase
     .from("vendors")
-    .update(data)
+    .update(formatted)
     .eq("id", id)
     .select()
     .single();

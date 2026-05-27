@@ -873,7 +873,7 @@ export function InventoryClient({
               </div>
               <div className="grid gap-2">
                 <Label>Phone</Label>
-                <Input value={vendorData.contact_phone} onChange={(e) => setVendorData({ ...vendorData, contact_phone: e.target.value })} />
+                <Input type="tel" value={vendorData.contact_phone} onChange={(e) => { const val = e.target.value; const digits = val.replace(/\D/g, ''); setVendorData({ ...vendorData, contact_phone: digits.length <= 3 ? digits : digits.length <= 6 ? `${digits.slice(0, 3)}-${digits.slice(3)}` : `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}` }); }} onBlur={(e) => { const digits = e.target.value.replace(/\D/g, ''); let cleaned = digits; if (cleaned.length === 11 && cleaned.startsWith('1')) cleaned = cleaned.slice(1); else if (cleaned.length === 11 && cleaned.startsWith('0')) cleaned = cleaned.slice(1); else if (cleaned.length === 12 && cleaned.startsWith('63')) cleaned = cleaned.slice(2); setVendorData({ ...vendorData, contact_phone: cleaned.length === 10 ? `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}` : digits }); }} />
               </div>
             </div>
             <div className="grid gap-2">

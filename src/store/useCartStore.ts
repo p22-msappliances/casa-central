@@ -33,10 +33,14 @@ export const useCartStore = create<CartState>()(
         );
         if (existingItemIndex > -1) {
           const updatedItems = [...currentItems];
-          updatedItems[existingItemIndex].quantity += newItem.quantity;
+          const newQty = updatedItems[existingItemIndex].quantity + newItem.quantity;
+          const maxQty = updatedItems[existingItemIndex].maxQuantity ?? newItem.maxQuantity;
+          updatedItems[existingItemIndex].quantity = maxQty !== undefined ? Math.min(newQty, maxQty) : newQty;
           set({ items: updatedItems });
         } else {
-          set({ items: [...currentItems, newItem] });
+          const maxQty = newItem.maxQuantity;
+          const qty = maxQty !== undefined ? Math.min(newItem.quantity, maxQty) : newItem.quantity;
+          set({ items: [...currentItems, { ...newItem, quantity: qty }] });
         }
       },
       removeItem: (variantId) => {
@@ -48,9 +52,11 @@ export const useCartStore = create<CartState>()(
           return;
         }
         set({
-          items: get().items.map((item) =>
-            item.variantId === variantId ? { ...item, quantity } : item
-          ),
+          items: get().items.map((item) => {
+            if (item.variantId !== variantId) return item;
+            const capped = item.maxQuantity !== undefined ? Math.min(quantity, item.maxQuantity) : quantity;
+            return { ...item, quantity: capped };
+          }),
         });
       },
       clearCart: () => set({ items: [] }),

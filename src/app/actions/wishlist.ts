@@ -32,9 +32,8 @@ export async function getUserWishlist() {
     const product = Array.isArray(item.products) ? item.products[0] : item.products;
     return {
       id: item.id,
-      name: product?.name,
-      price: product?.base_price,
-      imageUrl: product?.image_url,
+      product_id: item.product_id,
+      products: product,
     };
   }) || [];
 

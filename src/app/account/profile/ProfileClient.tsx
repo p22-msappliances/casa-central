@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User, Camera, Loader2 } from 'lucide-react';
 import { updateUserProfile } from '@/app/actions/profiles';
+import { formatPhone, formatPhoneInput } from '@/lib/utils';
 
 export function ProfileClient({ initialProfile }: { initialProfile: any }) {
   const [saving, setSaving] = useState(false);
@@ -86,8 +87,10 @@ export function ProfileClient({ initialProfile }: { initialProfile: any }) {
           <Label htmlFor="phone">Phone Number</Label>
           <Input
             id="phone"
+            type="tel"
             value={profile.phone_number}
-            onChange={(e) => setProfile({ ...profile, phone_number: e.target.value })}
+            onChange={(e) => setProfile({ ...profile, phone_number: formatPhoneInput(e.target.value) })}
+            onBlur={(e) => setProfile({ ...profile, phone_number: formatPhone(e.target.value) })}
             className="mt-1"
           />
         </div>

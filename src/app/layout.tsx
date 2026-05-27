@@ -5,6 +5,7 @@ import { Layout } from "@/components/ui/Layout";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { JsonLd } from "@/components/ui/JsonLd";
 import { Toaster } from "sonner";
+import { PwaRegister } from "@/components/PwaRegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,9 +36,15 @@ export const metadata: Metadata = {
   authors: [
     {
       name: "CASA CENTRAL",
-      url: "https://casacentralstore.vercel.app", // Placeholder URL
+      url: "https://casacentralstore.vercel.app",
     },
   ],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "CASA CENTRAL",
+    statusBarStyle: "black-translucent",
+  },
   openGraph: {
     title: "CASA CENTRAL - Premium Appliances & Audio",
     description: "Transforming modern homes through smart appliances and beautiful technology.",
@@ -62,9 +69,19 @@ export const metadata: Metadata = {
     ],
   },
   icons: {
-    icon: "/logo.png",
+    icon: [
+      { url: "/logo.png" },
+      { url: "/icons/icon-192.svg", type: "image/svg+xml", sizes: "192x192" },
+      { url: "/icons/icon-512.svg", type: "image/svg+xml", sizes: "512x512" },
+    ],
     shortcut: "/logo.png",
     apple: "/logo.png",
+    other: [
+      { rel: "mask-icon", url: "/icons/icon-512.svg", color: "#0F172A" },
+    ],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 
@@ -79,14 +96,19 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
     >
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        <meta name="theme-color" content="#C8A96B" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="CASA CENTRAL" />
         <JsonLd />
       </head>
       <body>
         <QueryProvider>
           <Layout>{children}</Layout>
         </QueryProvider>
-        <Toaster position="bottom-right" richColors closeButton />
+        <PwaRegister />
+        <Toaster position="bottom-right" richColors closeButton toastOptions={{ style: { userSelect: 'auto' } }} />
       </body>
     </html>
   );

@@ -35,7 +35,7 @@ export const CartDrawer = () => {
           </span>
         )}
       </button>
-      <SheetContent className="w-full sm:max-w-md bg-white text-foreground flex flex-col p-0">
+      <SheetContent className="w-full sm:max-w-md bg-white text-foreground flex flex-col p-0" showCloseButton={false}>
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/50">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-xl font-bold text-primary font-heading">

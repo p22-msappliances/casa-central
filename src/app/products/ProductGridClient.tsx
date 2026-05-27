@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ProductCard } from '@/components/ui/ProductCard';
 import { FilterSidebar } from '@/components/ui/FilterSidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useQuery } from '@tanstack/react-query';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { getProducts } from '@/app/actions/catalog';
 import { Database } from '@/types/database.types';
 
@@ -22,46 +23,79 @@ type ProductWithVariants = ProductRow & {
 interface ProductGridClientProps {
   initialCategories: any[];
   initialBrands: any[];
+  initialPriceRange: { min: number; max: number };
   initialPage: number;
   limit: number;
   offset: number;
   defaultCategory?: string;
   defaultBrand?: string;
   defaultSearch?: string;
+  wishlistProductIds?: string[];
 }
 
 export default function ProductGridClient({
   initialCategories,
   initialBrands,
+  initialPriceRange,
   initialPage,
   limit,
   offset,
   defaultCategory,
   defaultBrand,
   defaultSearch,
+  wishlistProductIds = [],
 }: ProductGridClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [categoryId, setCategoryId] = useState(defaultCategory || '');
-  const [brandId, setBrandId] = useState(defaultBrand || '');
+  const idToSlug = useMemo(() => {
+    const map = new Map<string, string>();
+    initialCategories.forEach((c: any) => map.set(c.id, c.slug));
+    initialBrands.forEach((b: any) => map.set(b.id, b.slug));
+    return map;
+  }, [initialCategories, initialBrands]);
+
+  const slugToId = useMemo(() => {
+    const map = new Map<string, string>();
+    initialCategories.forEach((c: any) => map.set(c.slug, c.id));
+    initialBrands.forEach((b: any) => map.set(b.slug, b.id));
+    return map;
+  }, [initialCategories, initialBrands]);
+
+function parseSlugs(value: string | undefined): string[] {
+  if (!value) return [];
+  return value.split(',').filter(Boolean);
+}
+
+  const [categorySlugs, setCategorySlugs] = useState<string[]>(parseSlugs(defaultCategory));
+  const [brandSlugs, setBrandSlugs] = useState<string[]>(parseSlugs(defaultBrand));
   const [searchTerm, setSearchTerm] = useState(defaultSearch || '');
   const [debouncedSearch, setDebouncedSearch] = useState(defaultSearch || '');
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [priceRange, setPriceRange] = useState<[number, number] | undefined>(undefined);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  const initialCategoryIds = useMemo(
+    () => categorySlugs.map(s => slugToId.get(s)).filter(Boolean) as string[],
+    [categorySlugs, slugToId]
+  );
+  const initialBrandIds = useMemo(
+    () => brandSlugs.map(s => slugToId.get(s)).filter(Boolean) as string[],
+    [brandSlugs, slugToId]
+  );
+
   const { data: productData, isLoading } = useQuery({
-    queryKey: ['products', categoryId, brandId, debouncedSearch, currentPage, priceRange?.[0], priceRange?.[1]],
+    queryKey: ['products', categorySlugs.join(','), brandSlugs.join(','), debouncedSearch, currentPage, priceRange?.[0], priceRange?.[1]],
     queryFn: async () => {
       const result = await getProducts({
-        categoryId: categoryId || undefined,
-        brandId: brandId || undefined,
+        categorySlugs: categorySlugs.length > 0 ? categorySlugs : undefined,
+        brandSlugs: brandSlugs.length > 0 ? brandSlugs : undefined,
         searchTerm: debouncedSearch || undefined,
         priceRange,
         limit,
@@ -85,24 +119,23 @@ export default function ProductGridClient({
   }, [router, pathname, searchParams]);
 
   const handleFilterChange = useCallback((newFilters: any) => {
-    if (newFilters.categoryId !== undefined) {
-      setCategoryId(newFilters.categoryId);
+    if (newFilters.categoryIds !== undefined) {
+      const slugs = newFilters.categoryIds.map((id: string) => idToSlug.get(id) || id);
+      setCategorySlugs(slugs);
       setCurrentPage(1);
-      updateURL({ category: newFilters.categoryId, page: '1' });
+      updateURL({ category: slugs.join(','), page: '1' });
     }
-    if (newFilters.brandId !== undefined) {
-      setBrandId(newFilters.brandId);
+    if (newFilters.brandIds !== undefined) {
+      const slugs = newFilters.brandIds.map((id: string) => idToSlug.get(id) || id);
+      setBrandSlugs(slugs);
       setCurrentPage(1);
-      updateURL({ brand: newFilters.brandId, page: '1' });
+      updateURL({ brand: slugs.join(','), page: '1' });
     }
     if (newFilters.price !== undefined && Array.isArray(newFilters.price)) {
       setPriceRange(newFilters.price as [number, number]);
       setCurrentPage(1);
     }
-    if (newFilters.energyRating !== undefined) {
-      console.log('Energy rating filter:', newFilters.energyRating);
-    }
-  }, [updateURL]);
+  }, [updateURL, idToSlug]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,11 +166,48 @@ export default function ProductGridClient({
         </Button>
       </form>
 
+      <div className="flex md:hidden items-center gap-2 mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full"
+          onClick={() => setFilterOpen(true)}
+        >
+          <SlidersHorizontal className="h-4 w-4 mr-2" /> Filters
+        </Button>
+      </div>
+
+      <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+        <SheetContent side="left" className="w-72 sm:max-w-xs overflow-y-auto" showCloseButton={false}>
+          <div className="flex items-center justify-between p-4 border-b border-brand-soft-gray/60">
+            <SheetTitle className="text-base font-bold">Filters</SheetTitle>
+            <Button variant="ghost" size="icon-sm" onClick={() => setFilterOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="p-4">
+            <FilterSidebar
+              categories={initialCategories}
+              brands={initialBrands}
+              minPrice={initialPriceRange.min}
+              maxPrice={initialPriceRange.max}
+              initialCategoryIds={initialCategoryIds}
+              initialBrandIds={initialBrandIds}
+              onFilterChange={(filters) => { handleFilterChange(filters); setFilterOpen(false); }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        <div className="md:col-span-1">
+        <div className="hidden md:block md:col-span-1">
           <FilterSidebar
             categories={initialCategories}
             brands={initialBrands}
+            minPrice={initialPriceRange.min}
+            maxPrice={initialPriceRange.max}
+            initialCategoryIds={initialCategoryIds}
+            initialBrandIds={initialBrandIds}
             onFilterChange={handleFilterChange}
           />
         </div>
@@ -153,7 +223,11 @@ export default function ProductGridClient({
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {productData.items.map((product: ProductWithVariants) => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    initialIsWishlisted={wishlistProductIds.includes(product.id)}
+                  />
                 ))}
               </div>
               {totalPages > 1 && (
